@@ -1,0 +1,20 @@
+{
+  "name": "kafka-consumer",
+  "version": "1.0.0",
+  "description": "Kafka consumer that processes news claims and stores in Elasticsearch",
+  "main": "consumer.js",
+  "scripts": {
+    "start": "node consumer.js"
+  },
+  "keywords": [
+    "kafka",
+    "elasticsearch",
+    "consumer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "@elastic/elasticsearch": "^8.11.0"
+  }
+}
