@@ -1,5 +1,4 @@
 import React from 'react';
-import '../styles/CategoryFilter.css';
 
 const CATEGORIES = [
   'All',
@@ -13,14 +12,18 @@ const CATEGORIES = [
 
 const CategoryFilter = ({ selectedCategory, onSelectCategory }) => {
   return (
-    <div className="category-filter">
-      <h3 className="category-title">Categories</h3>
-      <div className="category-buttons">
+    <div className="space-y-2">
+      <h3 className="text-sm sm:text-base font-semibold text-gray-900">Categories</h3>
+      <div className="flex flex-wrap gap-1.5">
         {CATEGORIES.map(category => (
           <button
             key={category}
             onClick={() => onSelectCategory(category)}
-            className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-md font-medium transition-colors text-xs sm:text-sm ${
+              selectedCategory === category
+                ? 'bg-gray-900 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+            }`}
           >
             {category}
           </button>

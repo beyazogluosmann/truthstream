@@ -4,7 +4,6 @@ import SearchBar from './SearchBar';
 import CategoryFilter from './CategoryFilter';
 import ClaimCard from './ClaimCard';
 import StatsPanel from './StatsPanel';
-import '../styles/Dashboard.css'; 
 
 const Dashboard = () => {
   const [claims, setClaims] = useState([]);
@@ -15,14 +14,6 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
-    fetchClaims();
-  }, [selectedCategory, searchQuery, page]);
 
   const fetchStats = async () => {
     try {
@@ -62,6 +53,15 @@ const Dashboard = () => {
     }
   };
 
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    fetchClaims();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, searchQuery, page]);
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     setPage(1);
@@ -86,74 +86,85 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1 className="dashboard-title">TruthStream</h1>
-        <p className="dashboard-subtitle">Real-time Fake News Detection System</p>
-      </header>
+    <div className="space-y-6">
+      <StatsPanel stats={stats} />
 
-      <div className="dashboard-content">
-        <StatsPanel stats={stats} />
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex-1">
+          <SearchBar onSearch={handleSearch} />
+        </div>
+      </div>
 
-        <SearchBar onSearch={handleSearch} />
+      <CategoryFilter
+        selectedCategory={selectedCategory}
+        onSelectCategory={handleCategorySelect}
+      />
 
-        <CategoryFilter
-          selectedCategory={selectedCategory}
-          onSelectCategory={handleCategorySelect}
-        />
-
-        <div className="claims-section">
-          <div className="claims-header">
-            <h2 className="claims-title">
-              {searchQuery
+      <div className="space-y-3">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 flex items-center gap-1.5">
+              <span className="text-base sm:text-lg">📰</span>
+              <span className="line-clamp-1">{searchQuery
                 ? `Search Results for "${searchQuery}"`
                 : selectedCategory === 'All'
                 ? 'All News Claims'
-                : `${selectedCategory} News`}
+                : `${selectedCategory} News`}</span>
             </h2>
-            <span className="claims-count">
-              {claims.length} claims (Page {page} of {totalPages})
-            </span>
+            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
+              <span className="text-xs font-semibold text-gray-700">{claims.length} claims</span>
+              <span className="text-gray-400 hidden sm:inline">•</span>
+              <span className="text-xs text-gray-600">Page {page}/{totalPages}</span>
+            </div>
           </div>
-
-          {loading ? (
-            <div className="loading">Loading claims...</div>
-          ) : error ? (
-            <div className="error">{error}</div>
-          ) : claims.length === 0 ? (
-            <div className="no-results">No claims found</div>
-          ) : (
-            <>
-              <div className="claims-list">
-                {claims.map((claim) => (
-                  <ClaimCard key={claim.id} claim={claim} />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="pagination">
-                  <button
-                    onClick={handlePrevPage}
-                    disabled={page === 1}
-                    className="pagination-btn"
-                  >
-                    Previous
-                  </button>
-                  <span className="pagination-info">
-                    Page {page} of {totalPages}
-                  </span>
-                  <button
-                    onClick={handleNextPage}
-                    disabled={page === totalPages}
-                    className="pagination-btn"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-            </>
-          )}
         </div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-600">Loading claims...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-600 font-medium">{error}</p>
+          </div>
+        ) : claims.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No claims found</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {claims.map((claim) => (
+                <ClaimCard key={claim.id} claim={claim} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 sm:gap-3 pt-6">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={page === 1}
+                  className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white border-2 border-gray-300 hover:border-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition font-semibold text-gray-700 text-sm sm:text-base"
+                >
+                  <span className="hidden sm:inline">← Previous</span>
+                  <span className="sm:hidden">←</span>
+                </button>
+                <span className="px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-900 text-white rounded-lg font-semibold text-sm sm:text-base">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  onClick={handleNextPage}
+                  disabled={page === totalPages}
+                  className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white border-2 border-gray-300 hover:border-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition font-semibold text-gray-700 text-sm sm:text-base"
+                >
+                  <span className="hidden sm:inline">Next →</span>
+                  <span className="sm:hidden">→</span>
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
