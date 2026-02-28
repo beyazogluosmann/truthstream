@@ -78,4 +78,14 @@ export const getClaimById = async (id) => {
   }
 };
 
+export const submitClaim = async (claimData) => {
+  try {
+    const response = await api.post('/claims/submit', claimData);
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting claim:', error);
+    throw error;
+  }
+};
+
 export default api;

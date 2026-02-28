@@ -4,6 +4,8 @@
 
 const express = require('express');
 const router = express.Router();
+const { v4: uuidv4 } = require('uuid');
+const { sendClaimToKafka } = require('../kafka-producer');
 const {
   getAllClaims,
   getClaimById,
@@ -171,6 +173,73 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// POST /api/claims/submit - Submit new claim for verification
+router.post('/submit', async (req, res) => {
+  try {
+    const { text, category, source } = req.body;
+
+    // Validation
+    if (!text || !category || !source) {
+      return res.status(400).json({
+        success: false,
+        error: 'text, category ve source alanları zorunludur'
+      });
+    }
+
+    if (text.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'Haber metni en az 10 karakter olmalıdır'
+      });
+    }
+
+    if (text.length > 1000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Haber metni en fazla 1000 karakter olabilir'
+      });
+    }
+
+    const validCategories = [
+      'Technology', 'Health', 'Politics', 'Science',
+      'Sports', 'Entertainment', 'Business', 'Environment'
+    ];
+
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Geçersiz kategori. Geçerli kategoriler: ' + validCategories.join(', ')
+      });
+    }
+
+    // Create claim
+    const claim = {
+      id: uuidv4(),
+      text: text.trim(),
+      category,
+      source: source.trim(),
+      timestamp: new Date().toISOString(),
+      user_submitted: true
+    };
+
+    // Send to Kafka for verification
+    await sendClaimToKafka(claim);
+
+    res.json({
+      success: true,
+      message: 'Haber doğrulama için gönderildi. Sonuçları birkaç saniye içinde görebilirsiniz.',
+      claim_id: claim.id
+    });
+
+  } catch (error) {
+    console.error('Submit claim error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Haber gönderilirken hata oluştu: ' + error.message
     });
   }
 });

@@ -23,10 +23,11 @@ app.get('/api/health', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({
-    message: 'TruthStream API',
+    message: 'TruthStream API - Gerçek Haber Doğrulama Sistemi',
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
+      submitClaim: 'POST /api/claims/submit',
       claims: '/api/claims',
       search: '/api/claims/search?q=',
       category: '/api/claims/category/:category',
@@ -54,17 +55,25 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
-    console.log('TruthStream Backend API Starting...\n');
+    console.log('\n🚀 TruthStream Backend API Starting...\n');
     
     const esConnected = await checkConnection();
-    if (!esConnected) {
-      console.error('WARNING: Elasticsearch not connected');
+    if (esConnected) {
+      console.log('✓ Elasticsearch: Connected');
+    } else {
+      console.log('✗ Elasticsearch: Not Connected');
+      console.log('⚠️  WARNING: Some features may not work\n');
     }
     
     app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-      console.log(`API Documentation: http://localhost:${PORT}`);
-      console.log(`Health Check: http://localhost:${PORT}/api/health\n`);
+      console.log(`\n📡 Server: http://localhost:${PORT}`);
+      console.log(`📋 API Documentation: http://localhost:${PORT}`);
+      console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`);
+      console.log(`\n📌 Main Endpoints:`);
+      console.log(`   POST /api/claims/submit - Submit claim for verification`);
+      console.log(`   GET  /api/claims - Get all claims`);
+      console.log(`   GET  /api/claims/stats - Get statistics`);
+      console.log(`\n✅ Backend ready! Press Ctrl+C to stop\n`);
     });
     
   } catch (error) {
