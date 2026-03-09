@@ -1,173 +1,325 @@
 import React, { useState, useEffect } from 'react';
-import { getAllClaims, searchClaims, getClaimsByCategory, getStats } from '../services/api';
-import SearchBar from './SearchBar';
-import CategoryFilter from './CategoryFilter';
-import ClaimCard from './ClaimCard';
-import StatsPanel from './StatsPanel';
+import { getAllClaims } from '../services/api';
 
-const Dashboard = () => {
+function Dashboard() {
   const [claims, setClaims] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({
+    total: 0,
+    verified: 0,
+    unverified: 0
+  });
+  const [filter, setFilter] = useState('all'); // all, verified, unverified
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchStats = async () => {
-    try {
-      const response = await getStats();
-      if (response.success) {
-        setStats(response.data);
-      }
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-    }
-  };
+  useEffect(() => {
+    fetchClaims();
+  }, []);
 
   const fetchClaims = async () => {
-    setLoading(true);
-    setError(null);
-
     try {
-      let response;
-
-      if (searchQuery) {
-        response = await searchClaims(searchQuery, page);
-      } else if (selectedCategory !== 'All') {
-        response = await getClaimsByCategory(selectedCategory, page);
-      } else {
-        response = await getAllClaims(page);
-      }
-
-      if (response.success) {
+      setLoading(true);
+      const response = await getAllClaims(1, 50);
+      
+      if (response.success && response.data) {
         setClaims(response.data);
-        setTotalPages(response.pagination.pages);
+        
+        // Calculate stats
+        const total = response.data.length;
+        const verified = response.data.filter(c => c.verified).length;
+        const unverified = total - verified;
+        
+        setStats({ total, verified, unverified });
       }
-    } catch (err) {
-      setError('Failed to fetch claims. Please try again.');
-      console.error('Error fetching claims:', err);
+    } catch (error) {
+      console.error('Error fetching claims:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
-    fetchClaims();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, searchQuery, page]);
-
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-    setPage(1);
+  const getCredibilityColor = (score) => {
+    if (score >= 70) return 'text-green-400 bg-green-500/20 border-green-500/30';
+    if (score >= 40) return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
+    return 'text-red-400 bg-red-500/20 border-red-500/30';
   };
 
-  const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
-    setSearchQuery('');
-    setPage(1);
+  const getCredibilityLabel = (score) => {
+    if (score >= 70) return 'Yüksek Güvenilirlik';
+    if (score >= 40) return 'Orta Güvenilirlik';
+    return 'Düşük Güvenilirlik';
   };
 
-  const handleNextPage = () => {
-    if (page < totalPages) {
-      setPage(page + 1);
+  const filteredClaims = claims.filter(claim => {
+    // Filter by verification status
+    if (filter === 'verified' && !claim.verified) return false;
+    if (filter === 'unverified' && claim.verified) return false;
+    
+    // Filter by search term
+    if (searchTerm && !claim.text.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
     }
-  };
+    
+    return true;
+  });
 
-  const handlePrevPage = () => {
-    if (page > 1) {
-      setPage(page - 1);
-    }
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // seconds
+    
+    if (diff < 60) return `${diff} saniye önce`;
+    if (diff < 3600) return `${Math.floor(diff / 60)} dakika önce`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} saat önce`;
+    return `${Math.floor(diff / 86400)} gün önce`;
   };
 
   return (
-    <div className="space-y-6">
-      <StatsPanel stats={stats} />
-
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1">
-          <SearchBar onSearch={handleSearch} />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      <CategoryFilter
-        selectedCategory={selectedCategory}
-        onSelectCategory={handleCategorySelect}
-      />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-pink-200 to-purple-200 mb-2">
+            Doğrulama Sonuçları
+          </h1>
+          <p className="text-gray-400">AI tarafından analiz edilen haberler</p>
+        </div>
 
-      <div className="space-y-3">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-2.5 sm:p-3">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 flex items-center gap-1.5">
-              <span className="text-base sm:text-lg">📰</span>
-              <span className="line-clamp-1">{searchQuery
-                ? `Search Results for "${searchQuery}"`
-                : selectedCategory === 'All'
-                ? 'All News Claims'
-                : `${selectedCategory} News`}</span>
-            </h2>
-            <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-full shrink-0">
-              <span className="text-xs font-semibold text-gray-700">{claims.length} claims</span>
-              <span className="text-gray-400 hidden sm:inline">•</span>
-              <span className="text-xs text-gray-600">Page {page}/{totalPages}</span>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Total Claims */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-xl rounded-2xl group-hover:blur-2xl transition-all duration-300"></div>
+            <div className="relative bg-slate-900/80 border border-purple-500/30 rounded-2xl p-6 backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Toplam Haber</p>
+                  <p className="text-3xl font-bold text-white">{stats.total}</p>
+                  <p className="text-xs text-gray-500 mt-1">Tüm kayıtlar</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Verified */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 blur-xl rounded-2xl group-hover:blur-2xl transition-all duration-300"></div>
+            <div className="relative bg-slate-900/80 border border-green-500/30 rounded-2xl p-6 backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Doğrulanmış</p>
+                  <p className="text-3xl font-bold text-green-400">{stats.verified}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0}%
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Unverified */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-orange-500/20 blur-xl rounded-2xl group-hover:blur-2xl transition-all duration-300"></div>
+            <div className="relative bg-slate-900/80 border border-red-500/30 rounded-2xl p-6 backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Doğrulanmamış</p>
+                  <p className="text-3xl font-bold text-red-400">{stats.unverified}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.total > 0 ? Math.round((stats.unverified / stats.total) * 100) : 0}%
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Filters */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Haber ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 pl-12 bg-slate-900/50 border border-purple-500/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+              />
+              <svg className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Filter Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                filter === 'all'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/50'
+                  : 'bg-slate-900/50 text-gray-400 border border-purple-500/30 hover:border-purple-500/50'
+              }`}
+            >
+              Tümü
+            </button>
+            <button
+              onClick={() => setFilter('verified')}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                filter === 'verified'
+                  ? 'bg-green-600 text-white shadow-lg shadow-green-500/50'
+                  : 'bg-slate-900/50 text-gray-400 border border-green-500/30 hover:border-green-500/50'
+              }`}
+            >
+              ✓ Doğru
+            </button>
+            <button
+              onClick={() => setFilter('unverified')}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                filter === 'unverified'
+                  ? 'bg-red-600 text-white shadow-lg shadow-red-500/50'
+                  : 'bg-slate-900/50 text-gray-400 border border-red-500/30 hover:border-red-500/50'
+              }`}
+            >
+              ✕ Yanlış
+            </button>
+          </div>
+        </div>
+
+        {/* Claims List */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600">Loading claims...</p>
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
           </div>
-        ) : error ? (
-          <div className="text-center py-12">
-            <p className="text-red-600 font-medium">{error}</p>
-          </div>
-        ) : claims.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No claims found</p>
+        ) : filteredClaims.length === 0 ? (
+          <div className="text-center py-20">
+            <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p className="text-gray-500 text-lg">Henüz haber yok</p>
+            <p className="text-gray-600 text-sm mt-2">İlk haberi gönderin ve AI analizini görün!</p>
           </div>
         ) : (
-          <>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {claims.map((claim) => (
-                <ClaimCard key={claim.id} claim={claim} />
-              ))}
-            </div>
+          <div className="space-y-4">
+            {filteredClaims.map((claim) => (
+              <div key={claim.id} className="relative group">
+                {/* Glow Effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 blur-xl rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300"></div>
+                
+                <div className="relative bg-slate-900/80 border border-purple-500/30 rounded-2xl p-6 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300">
+                  <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                    {/* Left: Credibility Score */}
+                    <div className="flex-shrink-0">
+                      <div className={`w-24 h-24 rounded-2xl border-2 ${getCredibilityColor(claim.credibility)} flex flex-col items-center justify-center`}>
+                        <div className="text-3xl font-bold">{claim.credibility}</div>
+                        <div className="text-xs opacity-75">/ 100</div>
+                      </div>
+                      <p className="text-xs text-center mt-2 text-gray-500">{getCredibilityLabel(claim.credibility)}</p>
+                    </div>
 
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 sm:gap-3 pt-6">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={page === 1}
-                  className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white border-2 border-gray-300 hover:border-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition font-semibold text-gray-700 text-sm sm:text-base"
-                >
-                  <span className="hidden sm:inline">← Previous</span>
-                  <span className="sm:hidden">←</span>
-                </button>
-                <span className="px-3 sm:px-5 py-2 sm:py-2.5 bg-gray-900 text-white rounded-lg font-semibold text-sm sm:text-base">
-                  {page} / {totalPages}
-                </span>
-                <button
-                  onClick={handleNextPage}
-                  disabled={page === totalPages}
-                  className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white border-2 border-gray-300 hover:border-gray-900 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition font-semibold text-gray-700 text-sm sm:text-base"
-                >
-                  <span className="hidden sm:inline">Next →</span>
-                  <span className="sm:hidden">→</span>
-                </button>
+                    {/* Middle: Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {/* Verification Badge */}
+                          {claim.verified ? (
+                            <span className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-xs font-semibold flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Doğrulanmış
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-xs font-semibold flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                              </svg>
+                              Doğrulanmamış
+                            </span>
+                          )}
+
+                          {/* Category */}
+                          <span className="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-lg text-purple-300 text-xs font-semibold">
+                            {claim.category}
+                          </span>
+
+                          {/* Time */}
+                          <span className="text-xs text-gray-500">
+                            {formatDate(claim.processed_at || claim.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Claim Text */}
+                      <p className="text-white text-lg mb-4 leading-relaxed">{claim.text}</p>
+
+                      {/* AI Reasoning */}
+                      {claim.ai_reasoning && (
+                        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-3">
+                          <div className="flex items-start gap-2">
+                            <svg className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M13 7H7v6h6V7z" />
+                              <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                              <p className="text-sm font-semibold text-purple-300 mb-1">AI Analizi</p>
+                              <p className="text-gray-400 text-sm">{claim.ai_reasoning}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Red Flags */}
+                      {claim.red_flags && claim.red_flags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {claim.red_flags.map((flag, index) => (
+                            <span key={index} className="px-3 py-1 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-300 text-xs flex items-center gap-1">
+                              🚩 {flag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Source */}
+                      {claim.source && (
+                        <div className="mt-3 text-xs text-gray-500">
+                          Kaynak: <span className="text-gray-400">{claim.source}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </div>
     </div>
   );
-};
+}
 
 export default Dashboard;

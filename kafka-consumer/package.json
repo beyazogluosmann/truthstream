@@ -14,7 +14,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "kafkajs": "^2.2.4",
-    "@elastic/elasticsearch": "^8.11.0"
+    "@anthropic-ai/sdk": "^0.78.0",
+    "@elastic/elasticsearch": "^8.11.0",
+    "dotenv": "^17.3.1",
+    "groq-sdk": "^0.37.0",
+    "kafkajs": "^2.2.4"
   }
 }

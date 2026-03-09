@@ -68,7 +68,7 @@ async function getClaimById(id){
         });
         return result._source;
     } catch (error) {
-        if(error.meta?.statusCode === 4000){
+        if(error.meta?.statusCode === 404){
             return null
         }
         console.error('Error fetching claim:', error.message);
@@ -139,10 +139,10 @@ async function getClaimsByCategory(category, from = 0, size = 20){
 
         return {
             total : result.hits.total.value,
-            claims: restult.hits.hits.map(hit => hit._source)
+            claims: result.hits.hits.map(hit => hit._source)
         }
     } catch (error) {
-        console.error('Error fethcing claims by category:', error.message);
+        console.error('Error fetching claims by category:', error.message);
         return {total: 0 , claims: []};
         
     }

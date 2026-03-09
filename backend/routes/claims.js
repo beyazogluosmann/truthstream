@@ -180,13 +180,13 @@ router.get('/:id', async (req, res) => {
 // POST /api/claims/submit - Submit new claim for verification
 router.post('/submit', async (req, res) => {
   try {
-    const { text, category, source } = req.body;
+    const { text } = req.body;
 
     // Validation
-    if (!text || !category || !source) {
+    if (!text) {
       return res.status(400).json({
         success: false,
-        error: 'text, category ve source alanları zorunludur'
+        error: 'Haber metni zorunludur'
       });
     }
 
@@ -204,24 +204,12 @@ router.post('/submit', async (req, res) => {
       });
     }
 
-    const validCategories = [
-      'Technology', 'Health', 'Politics', 'Science',
-      'Sports', 'Entertainment', 'Business', 'Environment'
-    ];
-
-    if (!validCategories.includes(category)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Geçersiz kategori. Geçerli kategoriler: ' + validCategories.join(', ')
-      });
-    }
-
     // Create claim
     const claim = {
       id: uuidv4(),
       text: text.trim(),
-      category,
-      source: source.trim(),
+      category: 'General',
+      source: 'User Submitted',
       timestamp: new Date().toISOString(),
       user_submitted: true
     };
