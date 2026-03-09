@@ -47,10 +47,19 @@ function SubmitClaim() {
         }, 2000);
       }
     } catch (error) {
-      setMessage({ 
-        type: 'error', 
-        text: ' Hata: ' + (error.response?.data?.error || error.message) 
-      });
+      // Handle rate limiting error specially
+      if (error.response?.status === 429) {
+        const retryAfter = error.response.data.retryAfter || 60;
+        setMessage({ 
+          type: 'error', 
+          text: ` ${error.response.data.error} (${retryAfter} saniye)` 
+        });
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: ' Hata: ' + (error.response?.data?.error || error.message) 
+        });
+      }
     } finally {
       setLoading(false);
     }

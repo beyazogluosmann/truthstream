@@ -15,6 +15,54 @@ const {
   getStats
 } = require('../elasticsearch');
 
+// Rate limiting configuration
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_MINUTE = 5; // Maximum 5 submissions per minute per IP
+
+/**
+ * Rate limiter middleware
+ * Prevents spam by limiting requests per IP address
+ */
+function rateLimiter(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  
+  if (!requestCounts.has(ip)) {
+    requestCounts.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+  
+  const userLimit = requestCounts.get(ip);
+  
+  if (now > userLimit.resetTime) {
+    userLimit.count = 1;
+    userLimit.resetTime = now + RATE_LIMIT_WINDOW;
+    return next();
+  }
+  
+  if (userLimit.count >= MAX_REQUESTS_PER_MINUTE) {
+    return res.status(429).json({
+      success: false,
+      error: 'Çok fazla istek gönderdiniz. Lütfen 1 dakika bekleyin.',
+      retryAfter: Math.ceil((userLimit.resetTime - now) / 1000)
+    });
+  }
+  
+  userLimit.count++;
+  next();
+}
+
+// Cleanup old rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of requestCounts.entries()) {
+    if (now > data.resetTime) {
+      requestCounts.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+
 // GET /api/claims
 router.get('/', async (req, res) => {
   try {
@@ -178,7 +226,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/claims/submit - Submit new claim for verification
-router.post('/submit', async (req, res) => {
+router.post('/submit', rateLimiter, async (req, res) => {
   try {
     const { text } = req.body;
 
@@ -203,6 +251,34 @@ router.post('/submit', async (req, res) => {
         error: 'Haber metni en fazla 1000 karakter olabilir'
       });
     }
+
+    // Spam detection - check for repeated characters or spam patterns
+    const spamWords = ['test', 'asdasd', 'qwerty', '123456'];
+    const lowerText = text.toLowerCase();
+    const containsSpam = spamWords.some(word => {
+      const repeatedWord = word.repeat(3);
+      return lowerText.includes(repeatedWord);
+    });
+    
+    if (containsSpam) {
+      return res.status(400).json({
+        success: false,
+        error: 'Geçersiz içerik tespit edildi'
+      });
+    }
+
+    // Duplicate check - prevent same text submission within 10 seconds
+    const duplicateKey = `dup_${text.substring(0, 50)}`;
+    const lastSubmit = requestCounts.get(duplicateKey);
+    
+    if (lastSubmit && Date.now() - lastSubmit < 10000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bu haber zaten gönderildi. Lütfen bekleyin.'
+      });
+    }
+    
+    requestCounts.set(duplicateKey, Date.now());
 
     // Create claim
     const claim = {
