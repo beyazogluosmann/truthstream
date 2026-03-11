@@ -280,34 +280,96 @@ function Dashboard() {
                       {/* AI Reasoning */}
                       {claim.ai_reasoning && (
                         <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 mb-3">
-                          <div className="flex items-start gap-2">
+                          <div className="flex items-start gap-2 mb-3">
                             <svg className="w-5 h-5 text-purple-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                               <path d="M13 7H7v6h6V7z" />
                               <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
                             </svg>
-                            <div>
-                              <p className="text-sm font-semibold text-purple-300 mb-1">AI Analizi</p>
-                              <p className="text-gray-400 text-sm">{claim.ai_reasoning}</p>
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-purple-300 mb-2">AI Analizi</p>
+                              <p className="text-gray-300 text-sm leading-relaxed">{claim.ai_reasoning}</p>
                             </div>
                           </div>
+
+                          {/* Detailed Scores - if available */}
+                          {claim.scores && (
+                            <div className="mt-4 pt-4 border-t border-slate-700/50">
+                              <p className="text-xs font-semibold text-gray-400 mb-3">Detaylı Değerlendirme</p>
+                              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                {/* Source Score */}
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs text-gray-400">Kaynak</p>
+                                  </div>
+                                  <p className="text-lg font-bold text-blue-300">{claim.scores.source || 0}/20</p>
+                                </div>
+
+                                {/* Logic Score */}
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <svg className="w-3 h-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs text-gray-400">Mantık</p>
+                                  </div>
+                                  <p className="text-lg font-bold text-purple-300">{claim.scores.logic || 0}/20</p>
+                                </div>
+
+                                {/* Factuality Score */}
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs text-gray-400">Gerçeklik</p>
+                                  </div>
+                                  <p className="text-lg font-bold text-green-300">{claim.scores.factuality || 0}/20</p>
+                                </div>
+
+                                {/* Language Score */}
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs text-gray-400">Dil/Üslup</p>
+                                  </div>
+                                  <p className="text-lg font-bold text-yellow-300">{claim.scores.language || 0}/20</p>
+                                </div>
+
+                                {/* Verifiability Score */}
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <svg className="w-3 h-3 text-pink-400" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs text-gray-400">Kanıt</p>
+                                  </div>
+                                  <p className="text-lg font-bold text-pink-300">{claim.scores.verifiability || 0}/20</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
                       {/* Red Flags */}
                       {claim.red_flags && claim.red_flags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {claim.red_flags.map((flag, index) => (
-                            <span key={index} className="px-3 py-1 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-300 text-xs flex items-center gap-1">
-                              🚩 {flag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Source */}
-                      {claim.source && (
-                        <div className="mt-3 text-xs text-gray-500">
-                          Kaynak: <span className="text-gray-400">{claim.source}</span>
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold text-orange-400 mb-2">Şüpheli Noktalar:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {claim.red_flags.map((flag, index) => (
+                              <span key={index} className="px-3 py-1.5 bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-300 text-xs flex items-center gap-1.5">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd" />
+                                </svg>
+                                {flag}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

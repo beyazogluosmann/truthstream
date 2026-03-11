@@ -23,29 +23,73 @@ const groq = new Groq({
  * @returns {string} Formatted prompt
  */
 function generateVerificationPrompt(text) {
-  return `Sen bir haber doğrulama uzmanısın. Aşağıdaki haber iddiasını analiz et:
+  return `Sen profesyonel bir haber doğrulama uzmanısın. Aşağıdaki haber iddiasını analiz et:
 
 HABER: "${text}"
 
-Lütfen şu kriterlere göre değerlendir:
-1. İddianın mantıksal tutarlılığı
-2. Olağandışı veya abartılı ifadeler
-3. Gerçek dünya bilgisi ile uyumu
-4. Dezenformasyon belirtileri
-5. Kaynak ve kanıt bulunabilirliği
+GÖREV: Bu haberi 5 kritere göre değerlendir ve DOĞAL, AÇIKLAYICI bir dille sonuç ver.
 
-Değerlendirmeni SADECE şu JSON formatında ver (başka bir şey yazma):
+DEĞERLENDİRME KRİTERLERİ:
+
+1. KAYNAK GÜVENİLİRLİĞİ (0-20 puan)
+   - **ÖNEMLİ**: Haberin nereden geldiğini araştır ve belirt
+   - Haberde kaynak var mı? Kaynak güvenilir mi?
+   - Örnek: "Bu haber resmi kaynaklarda (Reuters, BBC, vs.) yer almıyor"
+   - Örnek: "Bu iddia ilk olarak şu sitede yayınlandı: X"
+   - Hangi medya kuruluşlarında bulundu/bulunmadı belirt
+
+2. MANTIKSAL TUTARLILIK (0-20 puan)
+   - İddia mantıklı mı? Çelişki var mı?
+   - Örnek: "Bu iddia fiziksel olarak imkansız çünkü..."
+
+3. GERÇEK DÜNYA UYUMU (0-20 puan)
+   - Bilinen gerçeklerle uyumlu mu?
+   - **ÖNEMLİ**: Eğer haber bir kişinin ölümü/yaşamı hakkındaysa, o kişinin son aktivitelerini, paylaşımlarını, görüldüğü yerleri belirt
+   - Örnek: "Elon Musk dün Twitter'da paylaşım yaptı ve Tesla toplantısına katıldı"
+   - Örnek: "Bu kişi 2 gün önce canlı yayında görüldü"
+
+4. DİL VE ÜSLUP (0-20 puan)
+   - Nötr mu? Clickbait mi? Duygusal manipülasyon var mı?
+   - Örnek: "Başlık abartılı ve tıklama odaklı"
+
+5. DOĞRULANABİLİRLİK (0-20 puan)
+   - Somut kanıt var mı? Tarih, yer, sayılar spesifik mi?
+   - Haberi doğrulamak için hangi kaynaklara bakıldı
+   - Örnek: "Haberde somut tarih veya yer bilgisi yok"
+   - Örnek: "BBC, Reuters gibi kaynaklarda bu habere rastlanmadı"
+
+YANIT FORMATINDA DOĞAL DİL KULLAN:
+- "Bu haber yanlış/doğru çünkü..." gibi başla
+- **KAYNAK ARAŞTIRMASI YAP**: Haberin nereden geldiğini, hangi sitelerde bulunduğunu belirt
+- Gerçek kanıtlar göster: "X kişisi dün şu etkinlikte görüldü", "Y olayı 3 gün önce oldu"
+- Güncel bilgiler ver: "Son paylaşımlar", "resmi açıklamalar", "doğrulanmış bilgiler"
+- Hangi kaynaklarda araştırıldığını açıkla: "BBC, Reuters, CNN gibi kaynaklarda bu habere rastlanmadı"
+- Arkadaşına anlatır gibi yaz, robotik olma
+
+JSON FORMATINDA YANIT VER:
 {
-  "credibility": <0-100 arası sayı>,
+  "credibility": <0-100 arası toplam puan>,
   "verified": <true veya false>,
-  "reasoning": "<2-3 cümlelik Türkçe açıklama>",
-  "red_flags": ["<şüpheli nokta 1>", "<şüpheli nokta 2>"]
+  "reasoning": "<DOĞAL DİLDE 4-5 cümle. Haberin NEREDEN geldiğini, hangi kaynaklarda bulunduğunu/bulunmadığını belirt. Gerçek kanıtlar ve örnekler ver. Kişiler hakkındaysa son aktivitelerini açıkla.>",
+  "source_found": "<Haberin bulunduğu kaynak veya 'Resmi kaynaklarda bulunamadı' veya 'Kullanıcı tarafından gönderildi'>",
+  "red_flags": ["<spesifik şüpheli nokta 1>", "<spesifik şüpheli nokta 2>"],
+  "scores": {
+    "source": <0-20>,
+    "logic": <0-20>,
+    "factuality": <0-20>,
+    "language": <0-20>,
+    "verifiability": <0-20>
+  }
 }
 
 KURALLAR:
-- credibility ${CREDIBILITY_THRESHOLD} ve üzeriyse verified: true
-- credibility ${CREDIBILITY_THRESHOLD}'ın altındaysa verified: false    
-- Sadece JSON döndür, açıklama yapma`;
+- Credibility ${CREDIBILITY_THRESHOLD} ve üzeriyse verified: true, altındaysa false
+- Reasoning kısmında KAYNAK ARAŞTIRMASI yap ve belirt
+- "Resmi kaynaklarda bu haber yok" veya "Bu haber şu sitede ilk kez yayınlandı" gibi ifadeler kullan
+- Kuru "mantıksal tutarlılık yok" deme, NEDENİNİ açıkla
+- Eğer kişiler hakkındaysa, o kişinin SON AKTİVİTELERİNİ araştır ve belirt
+- Hangi kaynaklarda araştırma yaptığını belirt (BBC, Reuters, CNN, vs.)
+- Sadece JSON döndür`;
 }
 
 /**
@@ -116,6 +160,8 @@ async function verifyClaimWithAI(claim) {
       credibility: Math.round(aiResult.credibility),
       ai_reasoning: aiResult.reasoning || 'No explanation provided',
       red_flags: aiResult.red_flags || [],
+      source: aiResult.source_found || claim.source || 'Unknown',
+      scores: aiResult.scores || {},
       verification_method: `AI (Groq - ${AI_MODEL})`,
       processed_at: new Date().toISOString()
     };

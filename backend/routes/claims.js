@@ -231,30 +231,35 @@ router.post('/submit', rateLimiter, async (req, res) => {
     const { text } = req.body;
 
     // Validation
-    if (!text) {
+    if (!text || typeof text !== 'string') {
       return res.status(400).json({
         success: false,
         error: 'Haber metni zorunludur'
       });
     }
 
-    if (text.trim().length < 10) {
+    // Basic sanitization - remove HTML tags and dangerous characters
+    const sanitizedText = text
+      .replace(/[<>]/g, '') // Remove < and >
+      .trim();
+
+    if (sanitizedText.length < 10) {
       return res.status(400).json({
         success: false,
         error: 'Haber metni en az 10 karakter olmalıdır'
       });
     }
 
-    if (text.length > 1000) {
+    if (sanitizedText.length > 1000) {
       return res.status(400).json({
         success: false,
         error: 'Haber metni en fazla 1000 karakter olabilir'
       });
     }
 
-    // Spam detection - check for repeated characters or spam patterns
+    // Spam detection
     const spamWords = ['test', 'asdasd', 'qwerty', '123456'];
-    const lowerText = text.toLowerCase();
+    const lowerText = sanitizedText.toLowerCase();
     const containsSpam = spamWords.some(word => {
       const repeatedWord = word.repeat(3);
       return lowerText.includes(repeatedWord);
@@ -267,8 +272,8 @@ router.post('/submit', rateLimiter, async (req, res) => {
       });
     }
 
-    // Duplicate check - prevent same text submission within 10 seconds
-    const duplicateKey = `dup_${text.substring(0, 50)}`;
+    // Duplicate check
+    const duplicateKey = `dup_${sanitizedText.substring(0, 50)}`;
     const lastSubmit = requestCounts.get(duplicateKey);
     
     if (lastSubmit && Date.now() - lastSubmit < 10000) {
@@ -283,9 +288,8 @@ router.post('/submit', rateLimiter, async (req, res) => {
     // Create claim
     const claim = {
       id: uuidv4(),
-      text: text.trim(),
+      text: sanitizedText,
       category: 'General',
-      source: 'User Submitted',
       timestamp: new Date().toISOString(),
       user_submitted: true
     };
