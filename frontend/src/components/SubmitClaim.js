@@ -18,13 +18,67 @@ function SubmitClaim() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validation 1: Empty check
     if (!formData.text.trim()) {
-      setMessage({ type: 'error', text: ' Lütfen haber metnini girin!' });
+      setMessage({ type: 'error', text: 'Lütfen haber metnini girin!' });
       return;
     }
 
+    // Validation 2: Minimum length
     if (formData.text.trim().length < 10) {
-      setMessage({ type: 'error', text: ' Haber metni en az 10 karakter olmalıdır!' });
+      setMessage({ type: 'error', text: 'Haber metni en az 10 karakter olmalıdır!' });
+      return;
+    }
+
+    // Validation 3: Maximum length
+    if (formData.text.length > 1000) {
+      setMessage({ type: 'error', text: 'Haber metni en fazla 1000 karakter olabilir!' });
+      return;
+    }
+
+    // Validation 4: Random gibberish check
+    const text = formData.text.trim();
+    const words = text.split(/\s+/);
+    
+    // Check if text has too many consonants in a row (gibberish detection)
+    const hasGibberish = /[bcdfghjklmnpqrstvwxyzçğşBCDFGHJKLMNPQRSTVWXYZÇĞŞ]{8,}/i.test(text);
+    
+    if (hasGibberish) {
+      setMessage({ type: 'error', text: 'Lütfen anlamlı bir haber metni girin!' });
+      return;
+    }
+
+    // Check if text has at least some vowels (meaningful text)
+    const vowelCount = (text.match(/[aeiouüöıAEİOUÜÖI]/g) || []).length;
+    const consonantCount = (text.match(/[bcdfghjklmnpqrstvwxyzçğşBCDFGHJKLMNPQRSTVWXYZÇĞŞ]/g) || []).length;
+    
+    if (vowelCount === 0 || consonantCount / Math.max(vowelCount, 1) > 5) {
+      setMessage({ type: 'error', text: 'Geçersiz metin formatı tespit edildi!' });
+      return;
+    }
+
+    // Check if text has at least 3 words
+    if (words.length < 3) {
+      setMessage({ type: 'error', text: 'Haber metni en az 3 kelime içermelidir!' });
+      return;
+    }
+
+    // Validation 5: HTML/Script tag check
+    if (/<[^>]*>/g.test(formData.text)) {
+      setMessage({ type: 'error', text: 'HTML etiketleri kullanılamaz!' });
+      return;
+    }
+
+    // Validation 6: Suspicious patterns
+    const suspiciousPatterns = [
+      /javascript:/gi,
+      /on\w+=/gi,
+      /<script/gi,
+      /<iframe/gi
+    ];
+
+    if (suspiciousPatterns.some(pattern => pattern.test(formData.text))) {
+      setMessage({ type: 'error', text: 'Güvenlik: Geçersiz içerik tespit edildi!' });
       return;
     }
 

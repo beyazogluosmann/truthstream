@@ -89,7 +89,8 @@ KURALLAR:
 - Kuru "mantıksal tutarlılık yok" deme, NEDENİNİ açıkla
 - Eğer kişiler hakkındaysa, o kişinin SON AKTİVİTELERİNİ araştır ve belirt
 - Hangi kaynaklarda araştırma yaptığını belirt (BBC, Reuters, CNN, vs.)
-- Sadece JSON döndür`;
+- SADECE JSON döndür, markdown kod blogu kullanma
+- Yanıtın ilk karakteri { olmalı, son karakteri } olmalı`;
 }
 
 /**
@@ -102,7 +103,7 @@ async function callGroqAPI(prompt) {
     messages: [
       {
         role: "system",
-        content: "Sen profesyonel bir haber doğrulama uzmanısın. Sadece JSON formatında yanıt veriyorsun."
+        content: "Sen profesyonel bir haber doğrulama uzmanısın. SADECE JSON formatında yanıt ver, hiçbir ek açıklama veya markdown kullanma. JSON objesi dışında hiçbir şey yazma."
       },
       {
         role: "user",
@@ -114,7 +115,12 @@ async function callGroqAPI(prompt) {
     max_tokens: MAX_TOKENS
   });
 
-  return chatCompletion.choices[0]?.message?.content || '{}';
+  let responseText = chatCompletion.choices[0]?.message?.content || '{}';
+  
+  // Clean up response - remove markdown code blocks if present
+  responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  
+  return responseText;
 }
 
 /**
