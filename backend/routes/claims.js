@@ -312,4 +312,25 @@ router.post('/submit', rateLimiter, async (req, res) => {
   }
 });
 
+// DELETE /api/claims/:id - Delete a claim
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { deleteClaimById } = require('../elasticsearch');
+    await deleteClaimById(id);
+    
+    res.json({
+      success: true,
+      message: 'Haber başarıyla silindi'
+    });
+  } catch (error) {
+    console.error('Delete claim error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Haber silinirken hata oluştu: ' + error.message
+    });
+  }
+});
+
 module.exports = router;

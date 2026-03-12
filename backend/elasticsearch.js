@@ -260,6 +260,27 @@ async function getStats(){
 }
 
 
+/**
+ * Delete a claim by ID
+ * @param {String} id - Claim ID
+ * @returns {Boolean} Success status
+ */
+async function deleteClaimById(id) {
+  try {
+    await client.delete({
+      index: 'news-claims',
+      id: id,
+      refresh: true
+    });
+    
+    console.log(`Claim deleted: ${id}`);
+    return true;
+  } catch (error) {
+    console.error('Error deleting claim:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
   checkConnection,
   getAllClaims,
@@ -267,7 +288,8 @@ module.exports = {
   searchClaims,
   getClaimsByCategory,
   getClaimsByVerification,
-  getStats
+  getStats,
+  deleteClaimById
 };
 
 

@@ -88,4 +88,14 @@ export const submitClaim = async (claimData) => {
   }
 };
 
+export const deleteClaim = async (claimId) => {
+  try {
+    const response = await api.delete(`/claims/${claimId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting claim:', error);
+    throw error;
+  }
+};
+
 export default api;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllClaims } from '../services/api';
+import { getAllClaims, deleteClaim } from '../services/api';
 
 function Dashboard() {
   const [claims, setClaims] = useState([]);
@@ -35,6 +35,35 @@ function Dashboard() {
       console.error('Error fetching claims:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (claimId, claimText) => {
+    const preview = claimText.substring(0, 50) + '...';
+    if (!window.confirm(`Bu haberi silmek istediğinize emin misiniz?\n\n"${preview}"`)) {
+      return;
+    }
+    
+    try {
+      const result = await deleteClaim(claimId);
+      if (result.success) {
+        // Remove from UI immediately
+        setClaims(claims.filter(c => c.id !== claimId));
+        
+        // Update stats
+        const claim = claims.find(c => c.id === claimId);
+        setStats(prev => ({
+          total: prev.total - 1,
+          verified: claim?.verified ? prev.verified - 1 : prev.verified,
+          unverified: claim?.verified ? prev.unverified : prev.unverified - 1
+        }));
+        
+        // Show success message
+        alert('✅ Haber başarıyla silindi');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('❌ Silme işlemi başarısız oldu: ' + error.message);
     }
   };
 
@@ -372,6 +401,20 @@ function Dashboard() {
                           </div>
                         </div>
                       )}
+
+                      {/* Delete Button */}
+                      <div className="flex justify-end mt-4 pt-4 border-t border-slate-700/50">
+                        <button
+                          onClick={() => handleDelete(claim.id, claim.text)}
+                          className="group px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 hover:text-red-300 text-sm font-semibold transition-all duration-300 flex items-center gap-2"
+                          title="Haberi Sil"
+                        >
+                          <svg className="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Sil
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
