@@ -74,9 +74,24 @@ router.get('/', async (req, res) => {
     const from = (page - 1) * limit;
     const result = await getAllClaims(from, limit, sortBy, order);
     
+    // Minimal response - only essential fields
+    const minimalClaims = result.claims.map(claim => ({
+      id: claim.id,
+      text: claim.text,
+      category: claim.category,
+      timestamp: claim.timestamp,
+      verified: claim.verified,
+      credibility: claim.credibility,
+      ai_reasoning: claim.ai_reasoning,
+      red_flags: claim.red_flags || [],
+      source: claim.source,
+      scores: claim.scores
+      // Hidden: verification_method, processed_at, user_submitted
+    }));
+    
     res.json({
       success: true,
-      data: result.claims,
+      data: minimalClaims,
       pagination: {
         page: page,
         limit: limit,

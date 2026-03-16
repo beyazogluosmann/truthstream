@@ -9,7 +9,6 @@ const client = new Client({
 async function checkConnection() {
     try{
         const health = await client.cluster.health();
-        console.log('Elasticsearch connected:', health.status);
         return true;
     }catch (error) {
         console.error('Elasticsearch connection failed :', error.message);
@@ -32,8 +31,6 @@ async function saveVerifiedClaim(claim) {
                 processed_at: new Date().toISOString()
             }
         });
-
-         console.log(`Claim saved to ES: ${claim.id} (${claim.category}) - Credibility: ${claim.credibility}%`);
          return true;
     } catch (error){ 
      console.error('Failed to save claim to ES :', error.message);

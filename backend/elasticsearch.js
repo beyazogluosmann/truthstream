@@ -17,7 +17,6 @@ const client = new Client({
 async function checkConnection(){
     try {
         const health = await client.cluster.health();
-        console.log('Elasticsearch connected:', health.status);
         return true;
     } catch (error) {
         console.error('Elasticsearch connection failed:',error.message);
@@ -272,8 +271,6 @@ async function deleteClaimById(id) {
       id: id,
       refresh: true
     });
-    
-    console.log(`Claim deleted: ${id}`);
     return true;
   } catch (error) {
     console.error('Error deleting claim:', error.message);

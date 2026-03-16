@@ -21,7 +21,6 @@ async function connectProducer() {
   if (!isConnected) {
     await producer.connect();
     isConnected = true;
-    console.log('✓ Kafka Producer connected');
   }
 }
 
@@ -43,8 +42,6 @@ async function sendClaimToKafka(claim) {
         }
       ]
     });
-
-    console.log(`✓ Claim sent to Kafka: [${claim.category}] ${claim.text.substring(0, 50)}...`);
     return true;
   } catch (error) {
     console.error('✗ Kafka send error:', error.message);
@@ -59,7 +56,6 @@ async function disconnectProducer() {
   if (isConnected) {
     await producer.disconnect();
     isConnected = false;
-    console.log('✓ Kafka Producer disconnected');
   }
 }
 

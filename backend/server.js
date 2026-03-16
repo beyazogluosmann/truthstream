@@ -55,25 +55,10 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
-    console.log('\nTruthStream Backend API Starting...\n');
-    
     const esConnected = await checkConnection();
-    if (esConnected) {
-      console.log('Elasticsearch: Connected');
-    } else {
-      console.log('Elasticsearch: Not Connected');
-      console.log('WARNING: Some features may not work\n');
-    }
-    
     app.listen(PORT, () => {
-      console.log(`\nServer: http://localhost:${PORT}`);
-      console.log(`API Documentation: http://localhost:${PORT}`);
-      console.log(`Health Check: http://localhost:${PORT}/api/health`);
-      console.log(`\nMain Endpoints:`);
-      console.log(`   POST /api/claims/submit - Submit claim for verification`);
-      console.log(`   GET  /api/claims - Get all claims`);
-      console.log(`   GET  /api/claims/stats - Get statistics`);
-      console.log(`\nBackend ready! Press Ctrl+C to stop\n`);
+      const statusText = esConnected ? 'connected' : 'disconnected';
+      console.log(`TruthStream API listening on http://localhost:${PORT} (Elasticsearch: ${statusText})`);
     });
     
   } catch (error) {

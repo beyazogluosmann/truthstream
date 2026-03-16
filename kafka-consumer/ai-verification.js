@@ -144,9 +144,6 @@ function isValidAIResponse(aiResult) {
  */
 async function verifyClaimWithAI(claim) {
   try {
-    const previewText = claim.text.substring(0, 60);
-    console.log(`AI analyzing: "${previewText}..."`);
-
     // Generate prompt
     const prompt = generateVerificationPrompt(claim.text);
 
@@ -172,17 +169,10 @@ async function verifyClaimWithAI(claim) {
       processed_at: new Date().toISOString()
     };
 
-    // Log result
-    const status = aiResult.verified ? 'Verified' : 'Unverified';
-    console.log(`AI Result: ${status} (${aiResult.credibility}%)`);
-
     return verifiedClaim;
 
   } catch (error) {
     console.error('AI verification error:', error.message);
-    
-    // Fallback to rule-based verification
-    console.log('Falling back to rule-based verification');
     const { verifyClaim } = require('./verification');
     return verifyClaim(claim);
   }
