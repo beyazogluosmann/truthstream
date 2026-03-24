@@ -5,7 +5,7 @@
 
 const { Kafka } = require('kafkajs');
 const { checkConnection, saveVerifiedClaim } = require('./elasticsearch');
-const { verifyClaimWithAI } = require('./ai-verification');
+const { verifyClaimWithMultiAI } = require('./multi-ai-verification');
 
 // Constants
 const KAFKA_CLIENT_ID = 'truthstream-consumer';
@@ -72,8 +72,8 @@ async function processClaim(claim) {
     const previewText = claim.text.substring(0, 60);
     console.log(`\nProcessing claim: "${previewText}..."`);
     
-    // Step 1: AI Verification
-    const verifiedClaim = await verifyClaimWithAI(claim);
+    // Step 1: Multi-AI Verification
+    const verifiedClaim = await verifyClaimWithMultiAI(claim);
     
     // Step 2: Save to Elasticsearch
     const saved = await saveVerifiedClaim(verifiedClaim);

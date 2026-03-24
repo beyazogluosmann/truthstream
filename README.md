@@ -1,10 +1,27 @@
 #  TruthStream - Real-Time Fake News Detection System
 
-A real-time analytics platform that verifies news spreading on social media using Kafka and Elasticsearch.
+A real-time analytics platform that verifies news using **Multi-AI Consensus** with Kafka and Elasticsearch.
+
+## 🤖 Multi-AI Verification
+
+TruthStream uses **3 different AI models simultaneously** for fact-checking:
+- **Groq (Llama 3.3 70B)** - Fast and reliable
+- **Hugging Face (Mistral 7B)** - Open-source intelligence
+- **Google Gemini Pro** - Advanced reasoning
+
+### Why Multi-AI?
+✅ **Higher Accuracy** - Multiple perspectives reduce bias  
+✅ **Consensus Algorithm** - Weighted voting system  
+✅ **Confidence Scoring** - Shows agreement level between models  
+✅ **Fallback Protection** - Works even if one AI fails  
+✅ **Cost Effective** - Uses only free tiers
 
 ##  Architecture
 ```
-Fake News Generator → Kafka → Consumer → Elasticsearch → React Dashboard
+News Input → Kafka → Multi-AI Verification → Consensus → Elasticsearch → React Dashboard
+                      ├─ Groq (40%)
+                      ├─ Hugging Face (30%)
+                      └─ Gemini (30%)
 ```
 
 ##  Tech Stack
@@ -49,7 +66,25 @@ npm install
 npm start
 ```
 
-### 4. Start Kafka Consumer
+### 4. Configure AI API Keys
+```bash
+cd kafka-consumer
+cp .env.example .env
+```
+
+Edit `.env` and add your API keys:
+```env
+GROQ_API_KEY=your_groq_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_token_here
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+**Get your free API keys:**
+- Groq: https://console.groq.com/keys
+- Hugging Face: https://huggingface.co/settings/tokens  
+- Google Gemini: https://makersuite.google.com/app/apikey
+
+### 5. Start Kafka Consumer
 ```bash
 cd kafka-consumer
 npm install
@@ -74,12 +109,16 @@ Dashboard: http://localhost:3000
 
 ##  Features
 
+-  **Multi-AI Verification** - 3 AI models working together
+-  **Consensus Algorithm** - Weighted scoring system
+-  **Confidence Level** - Shows AI agreement (high/medium/low)
 -  Real-time news feed
 -  Credibility score calculation
 -  Category-based filtering
 -  Full-text search (Elasticsearch)
 -  Trending topics
 -  Interactive charts
+-  Provider-specific analysis
 
 ##  Dashboard Views
 
@@ -100,11 +139,17 @@ docker exec -it kafka kafka-topics --list --bootstrap-server localhost:9092
 ##  Project Structure
 ```
 truthstream/
-├── news-generator/      # Fake news generator
-├── kafka-consumer/      # Kafka consumer → Elasticsearch
-├── backend/             # REST API
-├── frontend/            # React Dashboard
-└── docker-compose.yml   # Docker services
+├── kafka-consumer/           # Kafka consumer with Multi-AI
+│   ├── providers/            # AI provider modules
+│   │   ├── groq.js          # Groq/Llama integration
+│   │   ├── huggingface.js   # Hugging Face integration
+│   │   └── gemini.js        # Google Gemini integration
+│   ├── multi-ai-verification.js  # Consensus orchestrator
+│   ├── consumer.js          # Main Kafka consumer
+│   └── elasticsearch.js     # Database operations
+├── backend/                 # REST API
+├── frontend/                # React Dashboard
+└── docker-compose.yml       # Docker services
 ```
 
 ##  Stopping Services
@@ -118,13 +163,47 @@ docker-compose down -v
 
 ## 🔧 Development
 
-### Adding New Categories
+### Configuring AI Providers
 
-Edit `news-generator/data/categories.js`
+Edit `kafka-consumer/multi-ai-verification.js`:
+```javascript
+const ENABLED_PROVIDERS = ['groq', 'huggingface', 'gemini'];
+const PROVIDER_WEIGHTS = {
+  groq: 0.4,          // 40% weight
+  huggingface: 0.3,   // 30% weight
+  gemini: 0.3         // 30% weight
+};
+```
 
-### Improving Verification Logic
+### Adding New AI Providers
 
-Edit `kafka-consumer/verification.js`
+1. Create `providers/your-ai.js`
+2. Implement `verifyWithYourAI(claimText)` function
+3. Add to `ENABLED_PROVIDERS` array
+4. Set weight in `PROVIDER_WEIGHTS`
+
+### Multi-AI Response Format
+
+Each verified claim includes:
+```json
+{
+  "credibility": 75,
+  "verified": true,
+  "confidence_score": 85,
+  "ai_consensus": {
+    "agreement_level": "high",
+    "successful_providers": 3,
+    "processing_time_ms": 2500
+  },
+  "provider_results": [
+    {
+      "provider": "groq",
+      "credibility": 78,
+      "reasoning": "..."
+    }
+  ]
+}
+```
 
 ##  Notes
 

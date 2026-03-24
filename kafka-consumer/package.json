@@ -16,6 +16,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@elastic/elasticsearch": "^8.11.0",
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.13.6",
     "dotenv": "^17.3.1",
     "groq-sdk": "^0.37.0",
     "kafkajs": "^2.2.4"
