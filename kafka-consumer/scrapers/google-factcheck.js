@@ -50,7 +50,10 @@ async function searchFactCheck(claimText) {
 
     console.log(`[FactCheck] ✅ SUCCESS! Found ${claims.length} fact-check(s)`);
     if (claims.length > 0 && claims[0].claimReview) {
-      console.log(`[FactCheck] 📰 First Publisher: ${claims[0].claimReview[0]?.publisher?.name || 'N/A'}`);
+      const firstRating = claims[0].claimReview[0]?.textualRating || 'N/A';
+      const firstPublisher = claims[0].claimReview[0]?.publisher?.name || 'N/A';
+      console.log(`[FactCheck] 📰 First Publisher: ${firstPublisher}`);
+      console.log(`[FactCheck] ⭐ First Rating: ${firstRating}`);
     }
     console.log('[FactCheck] === API TEST END ===\n');
 
@@ -90,11 +93,23 @@ function formatFactCheckResults(results) {
   }
 
   let context = `Google Fact Check Sonuçları: ${results.total} kontrol bulundu.\n\n`;
+  context += `ÖNEMLİ: Google Fact Check'te bulunması = doğru demek DEĞİLDİR! Rating'e dikkat et!\n\n`;
   
   results.claims.slice(0, 3).forEach((claim, i) => {
     context += `${i + 1}. İddia: "${claim.text}"\n`;
     if (claim.claimant) context += `   Kim söyledi: ${claim.claimant}\n`;
-    if (claim.rating) context += `   Değerlendirme: ${claim.rating}\n`;
+    if (claim.rating) {
+      context += `   🎯 RATING (ÖNEMLİ): ${claim.rating}\n`;
+      // Rating yorumu ekle
+      const ratingLower = claim.rating.toLowerCase();
+      if (ratingLower.includes('false') || ratingLower.includes('yanlış')) {
+        context += `   ⚠️  DİKKAT: Bu iddia YANLIŞ olarak işaretlenmiş!\n`;
+      } else if (ratingLower.includes('true') || ratingLower.includes('doğru')) {
+        context += `   ✅ Bu iddia DOĞRU olarak işaretlenmiş!\n`;
+      } else if (ratingLower.includes('misleading') || ratingLower.includes('yanıltıcı')) {
+        context += `   ⚠️  Bu iddia YANILTICI olarak işaretlenmiş!\n`;
+      }
+    }
     if (claim.publisher) context += `   Kaynak: ${claim.publisher}\n`;
     if (claim.reviewDate) {
       context += `   Tarih: ${new Date(claim.reviewDate).toLocaleDateString('tr-TR')}\n`;
