@@ -78,88 +78,74 @@ HABER: "${text}"
 
 ${scraperContext ? `\n${scraperContext}\n` : ''}
 
-ÇOK ÖNEMLİ KURALLAR:
+PUANLAMA SİSTEMİ (ÇOK ÖNEMLİ):
 
-1. WEB SCRAPING SONUÇLARINI KULLAN:
-   - Eğer haber BBC, Reuters, CNN, AP, AFP'de bulunduysa → YÜKSEK PUAN (75-90)
-   - Google Fact Check'te DOĞRU/TRUE diye işaretlenmişse → ÇOK YÜKSEK PUAN (85-95)
-   - Google Fact Check'te kayıt var ama YANLIŞ/FALSE diye işaretlenmişse → ÇOK DÜŞÜK PUAN (5-15)
-   - Google Fact Check'te bulundu ama rating belirsizse → DİKKATLİ DEĞERLENDIR (40-60)
-   - Türk haber kaynaklarında bulunduysa → ORTA-YÜKSEK PUAN (65-80)
-   - HİÇBİR KAYNAKTA YOKSA → DÜŞÜK PUAN (20-40) - ANCAK güncel olaylar için bu normaldir!
+📊 PUAN ARALIKLARI:
+90-100: Kesinlikle doğru, kayıtlı haber
+80-89:  Muhtemelen doğru, mantıklı gelişme  
+70-79:  Olası doğru, normal haber kategorisi ← SPOR/EKONOMİ BURAYA!
+60-69:  Belirsiz, daha fazla araştırma gerekli
+50-59:  Şüpheli, kaynak eksikliği var
+0-49:   Yanlış veya dezenformasyon
 
-ÖNEMLİ: Google Fact Check'te bulunması = doğru demek DEĞİLDİR! Rating'e bak!
+🎯 TÜRK HABERLERİ İÇİN BAŞLANGIÇ PUANLARI:
 
-2. REASONING YAZMA KURALLARI - ÇOK ÖNEMLİ:
-   
-   YASAKLAR:
-   ❌ "Bu haber ... iddia ediyor" ile başlama
-   ❌ "Ancak web scraping sonuçlarında..." cümlesi kullanma
-   ❌ "büyük uluslararası kaynaklarda (BBC, Reuters, CNN)" gibi genel cümleler
-   ❌ "Google Fact Check veritabanında da..." şablon ifadeler
-   ❌ "Bu durum haberin güvenilirliğini düşürüyor" gibi jenerik sonuçlar
-   ❌ Her haberde aynı cümle yapısını kullanma!
-   
-   DOĞRU YAKLAŞIM:
-   ✅ Haberin spesifik içeriğini analiz et
-   ✅ Gerçek kaynak isimlerini yaz (örn: "BBC News ve Reuters'te yayınlandı")
-   ✅ Rakamlar varsa spesifik olarak değerlendir
-   ✅ Her claim için FARKLI bir analiz yaz
-   ✅ Doğal ve akıcı cümleler kur
+1. SPOR HABERLERİ → BAŞLANGIÇ: 75 PUAN
+   - Fenerbahçe, Galatasaray, Beşiktaş, Trabzonspor
+   - Transfer, ayrılık, yeni imza haberleri
+   - Bu Türkiye'de GÜNLÜKtür, çok normal!
 
-3. ÖRNEK REASONING'LER:
+2. EKONOMİ HABERLERİ → BAŞLANGIÇ: 70 PUAN
+   - Asgari ücret, TL, döviz, enflasyon
+   - TBMM kararları, bakanlık açıklamaları
 
-❌ KÖTÜ (Her haberde aynı):
-"Bu haber Elon Musk'ın uzaya gittiğini iddia ediyor. Ancak web scraping sonuçlarında bu bilgi büyük uluslararası kaynaklarda bulunamadı."
+3. POLİTİK HABERLER → BAŞLANGIÇ: 65 PUAN
+   - Seçim, atama, toplantı
 
-✅ İYİ (Özel ve spesifik):
-"Elon Musk'ın uzaya gittiği iddiası NewsAPI'de 3 farklı kaynakta bulundu: Space.com, The Verge ve TechCrunch. Bu teknoloji odaklı kaynaklar güvenilir olmakla birlikte ana haber ajansları (Reuters, AP) henüz doğrulamadı. İddia spesifik tarih içermiyor ancak SpaceX'in yakın zamandaki lansmanlarıyla uyumlu."
+4. ULUSLARARASI → BAŞLANGIÇ: 60 PUAN
+   - Savaş, çatışma (İran-İsrail, vb.)
 
-✅ İYİ (Başka bir örnek):
-"417 bin TL bedelli askerlik ücreti iddiası kontrol edildi. TRT Haber ve Hürriyet'te benzer rakamlarla haberler mevcut. TBMM web sitesinde bu konuda taslak görüşme kayıtları var. Rakam 2026 ekonomik koşulları için makul, ancak henüz resmi onay aşamasında."
+5. ÜNLÜ/ŞOK HABERİ → BAŞLANGIÇ: 20 PUAN
+   - Ölüm, skandal (kaynak gerekir!)
 
-✅ İYİ (Yalan haber örneği):
-"İddia edilen kişinin ölümü ile ilgili hiçbir resmi kaynak bulunamadı. NewsAPI'de son 24 saatteki taramada bu isimle ilgili hiçbir ölüm haberi yok. Google Fact Check'te de benzer iddialar daha önce 'yanlış' olarak işaretlenmiş. Bu tür şok haberlerin kaynak gösterilmeden yayılması tipik dezenformasyon örneğidir."
+🔍 PUAN AYARLAMA:
 
-4. DEĞERLENDİRME KRİTERLERİ:
+EKLE (+):
++ Web'de kaynak bulundu → +10 puan
++ Google Fact Check DOĞRU → +15 puan
++ Mantık çok güçlü → +10 puan
 
-   KAYNAK (0-20):
-   - Kaç kaynak bulundu? Hangileri?
-   - Kaynaklar güvenilir mi?
-   
-   MANTIK (0-20):
-   - Rakamlar makul mü?
-   - Fiziksel olarak mümkün mü?
-   
-   GERÇEKÇILIK (0-20):
-   - Güncel olaylarla uyumlu mu?
-   - Benzer haberler var mı?
-   
-   DİL (0-20):
-   - Clickbait mi, haber dili mi?
-   - Abartılı ifadeler var mı?
-   
-   DOĞRULANABİLİRLİK (0-20):
-   - Tarih, rakam, isim var mı?
-   - Kaynak belirtilmiş mi?
+ÇIKAR (-):
+- Google Fact Check YANLIŞ → -40 puan
+- Fiziksel imkansız → -50 puan
+- Clickbait üslubu → -10 puan
+
+📝 REASONING ÖRNEKLERİ:
+
+SPOR:
+"Fenerbahçe'nin oyuncu ile yollarını ayırması Türk futbolunda rutin bir gelişme. Transfer dönemlerinde bu tür haberler Fanatik, Hürriyet Spor, NTV Spor'da sık görülür. Web scraping'de spesifik kayıt olmasa da, bu normal bir takım değişikliği. Mantıksal olarak tutarlı ve olası."
+
+EKONOMİ:
+"Asgari ücret artışı Türkiye'de düzenli gündem konusu. TBMM ve Çalışma Bakanlığı yılda birkaç kez bu konuyu ele alır. Söylenen rakam 2026 koşulları için makul. Henüz resmi açıklama olmasa da, bu tür haberler önce ekonomi medyasında yer alır."
+
+YALAN:
+"Ünlü kişinin ölüm iddiası. Tüm haber ajanslarında kayıt yok, sosyal medya hesapları aktif. Bu tür şok haberler genellikle viral dezenformasyon. Kesinlikle yanlış."
 
 JSON YANIT:
 {
-  "credibility": <0-100 arası puan>,
-  "verified": <true/false (60+ = true)>,
-  "reasoning": "<Her claim için ÖZEL ve FARKLI analiz - şablon kullanma!>",
-  "source_found": "<Bulunan gerçek kaynak isimleri veya 'Kaynak bulunamadı'>",
-  "red_flags": [<spesifik şüpheli noktalar>],
+  "credibility": <0-100 - YUKARIDAKI KURALLARA GÖRE>,
+  "verified": <true (70+), false (<70)>,
+  "reasoning": "<Kategori + mantık + scraping + sonuç>",
+  "source_found": "<Bulunan kaynaklar veya Kaynak bulunamadı>",
+  "red_flags": [<şüpheli noktalar varsa>],
   "scores": {
     "source": <0-20>,
-    "logic": <0-20>,
+    "logic": <0-25>,
     "factuality": <0-20>,
-    "language": <0-20>,
+    "language": <0-15>,
     "verifiability": <0-20>
   }
 }
-
-ÖNEMLİ: Her habere özel, yaratıcı ve farklı bir analiz yap! Şablon cümle kullanma!
 
 SADECE JSON döndür.`;
 }

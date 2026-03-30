@@ -30,14 +30,21 @@ async function searchNewsAPI(claimText) {
     const keywords = extractKeywords(claimText);
     console.log(`[NewsAPI] 🔑 Keywords: "${keywords}"`);
     console.log(`[NewsAPI] 📡 Sending request to: ${NEWS_API_URL}`);
-    console.log(`[NewsAPI] 📋 Params: language=en, sortBy=relevancy, pageSize=5`);
+    
+    // Detect language - Turkish or English
+    const isTurkish = /[ğüşıöçĞÜŞİÖÇ]/.test(claimText) || 
+                      /\b(türkiye|ankara|istanbul|fenerbahçe|galatasaray|beşiktaş)\b/i.test(claimText);
+    
+    const language = isTurkish ? 'tr' : 'en';
+    console.log(`[NewsAPI] 🌐 Detected language: ${language}`);
+    console.log(`[NewsAPI] 📋 Params: language=${language}, sortBy=relevancy, pageSize=10`);
     
     const response = await axios.get(NEWS_API_URL, {
       params: {
         q: keywords,
-        language: 'en',
+        language: language,
         sortBy: 'relevancy',
-        pageSize: 5,
+        pageSize: 10,
         apiKey: NEWS_API_KEY
       },
       timeout: 5000
