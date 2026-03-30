@@ -22,7 +22,14 @@ function Dashboard() {
       const response = await getAllClaims(1, 50);
       
       if (response.success && response.data) {
-        setClaims(response.data);
+        // Sort by verified_at descending (newest first)
+        const sortedClaims = response.data.sort((a, b) => {
+          const dateA = new Date(a.verified_at || a.submitted_at);
+          const dateB = new Date(b.verified_at || b.submitted_at);
+          return dateB - dateA; // Newest first
+        });
+        
+        setClaims(sortedClaims);
         
         // Calculate stats
         const total = response.data.length;

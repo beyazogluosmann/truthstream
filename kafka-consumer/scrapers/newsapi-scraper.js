@@ -89,15 +89,16 @@ async function searchNewsAPI(claimText) {
  */
 function extractKeywords(text) {
   // Remove common Turkish words and extract key terms
-  const stopWords = ['bir', 'bu', 'şu', 'o', 've', 'veya', 'için', 'ile', 'oldu', 'olacak', 'edildi'];
+  const stopWords = ['bir', 'bu', 'şu', 'o', 've', 'veya', 'için', 'ile', 'oldu', 'olacak', 'edildi', 'dedi', 'gibi', 'kadar'];
   
   const words = text
     .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
+    .replace(/[^\wğüşıöçĞÜŞİÖÇ\s]/g, ' ')
     .split(/\s+/)
-    .filter(word => word.length > 3 && !stopWords.includes(word));
+    .filter(word => word.length > 2 && !stopWords.includes(word));
   
-  return words.slice(0, 5).join(' ');
+  // Take up to 10 words for better search
+  return words.slice(0, 10).join(' ');
 }
 
 /**

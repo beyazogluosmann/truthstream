@@ -81,60 +81,75 @@ ${scraperContext ? `\n${scraperContext}\n` : ''}
 ÇOK ÖNEMLİ KURALLAR:
 
 1. WEB SCRAPING SONUÇLARINI KULLAN:
-   - Eğer haber BBC, Reuters, CNN'de bulunduysa → YÜKSEK PUAN (75-90)
-   - Google Fact Check'te doğrulandıysa → ÇOK YÜKSEK PUAN (85-95)
-   - Türk haber kaynaklarında bulunduysa → ORTA-YÜKSEK PUAN (70-85)
-   - HİÇBİR KAYNAKTA YOKSA → DÜŞÜK PUAN (10-30)
+   - Eğer haber BBC, Reuters, CNN, AP, AFP'de bulunduysa → YÜKSEK PUAN (75-90)
+   - Google Fact Check'te DOĞRU/TRUE diye işaretlenmişse → ÇOK YÜKSEK PUAN (85-95)
+   - Google Fact Check'te kayıt var ama YANLIŞ/FALSE diye işaretlenmişse → ÇOK DÜŞÜK PUAN (5-15)
+   - Google Fact Check'te bulundu ama rating belirsizse → DİKKATLİ DEĞERLENDIR (40-60)
+   - Türk haber kaynaklarında bulunduysa → ORTA-YÜKSEK PUAN (65-80)
+   - HİÇBİR KAYNAKTA YOKSA → DÜŞÜK PUAN (20-40) - ANCAK güncel olaylar için bu normaldir!
 
-2. KAYNAK DEĞERLENDİRME:
-   - Resmi kaynaklarda (TBMM, Resmi Gazete) → 85-100
-   - Büyük haber ajanslarında (BBC, Reuters, AFP) → 75-90
-   - Ulusal haber kanallarında (TRT, CNN Türk) → 70-85
-   - Sadece sosyal medyada → 10-30
+ÖNEMLİ: Google Fact Check'te bulunması = doğru demek DEĞİLDİR! Rating'e bak!
 
-3. RAKAM MANTIK KONTROLÜ:
-   - Spesifik rakam var ve makul mu değerlendir
-   - Türkiye ekonomisi ve güncel politikalarla uyumlu mu?
-   - Abartılı veya mantıksız değerler şüphelidir
+2. REASONING YAZMA KURALLARI - ÇOK ÖNEMLİ:
+   
+   YASAKLAR:
+   ❌ "Bu haber ... iddia ediyor" ile başlama
+   ❌ "Ancak web scraping sonuçlarında..." cümlesi kullanma
+   ❌ "büyük uluslararası kaynaklarda (BBC, Reuters, CNN)" gibi genel cümleler
+   ❌ "Google Fact Check veritabanında da..." şablon ifadeler
+   ❌ "Bu durum haberin güvenilirliğini düşürüyor" gibi jenerik sonuçlar
+   ❌ Her haberde aynı cümle yapısını kullanma!
+   
+   DOĞRU YAKLAŞIM:
+   ✅ Haberin spesifik içeriğini analiz et
+   ✅ Gerçek kaynak isimlerini yaz (örn: "BBC News ve Reuters'te yayınlandı")
+   ✅ Rakamlar varsa spesifik olarak değerlendir
+   ✅ Her claim için FARKLI bir analiz yaz
+   ✅ Doğal ve akıcı cümleler kur
 
-4. REASONING YAPISI - ÇOK ÖNEMLİ:
-   a) İlk cümle: Haberin özeti
-   b) İkinci cümle: HANGİ KAYNAKLARDA BULUNDU (scraping sonuçlarını kullan!)
-   c) Üçüncü cümle: KAYNAKLARIN GÜVENİLİRLİĞİ
-   d) Dördüncü cümle: RAKAM ANALİZİ (varsa)
-   e) Son cümle: KESİN SONUÇ (olabilir kullanma!)
+3. ÖRNEK REASONING'LER:
 
-ÖRNEK REASONING:
-"Bu haber bedelli askerlik ücretinin 417 bin TL'ye çıktığını iddia ediyor. Web scraping sonucunda bu haber BBC, Reuters ve TRT Haber'de bulundu. Büyük uluslararası ve ulusal kaynakların bu haberi vermesi güvenilirliği artırıyor. 417 bin TL rakamı, 2026 ekonomik koşulları ve önceki bedelli askerlik ücretleri göz önüne alındığında makul bir rakamdır. Bu güncel bir politika değişikliği ve doğru bir haber."
+❌ KÖTÜ (Her haberde aynı):
+"Bu haber Elon Musk'ın uzaya gittiğini iddia ediyor. Ancak web scraping sonuçlarında bu bilgi büyük uluslararası kaynaklarda bulunamadı."
 
-DEĞERLENDİRME:
+✅ İYİ (Özel ve spesifik):
+"Elon Musk'ın uzaya gittiği iddiası NewsAPI'de 3 farklı kaynakta bulundu: Space.com, The Verge ve TechCrunch. Bu teknoloji odaklı kaynaklar güvenilir olmakla birlikte ana haber ajansları (Reuters, AP) henüz doğrulamadı. İddia spesifik tarih içermiyor ancak SpaceX'in yakın zamandaki lansmanlarıyla uyumlu."
 
-1. KAYNAK GÜVENİLİRLİĞİ (0-20):
-   - Hangi kaynaklarda bulundu? (scraping sonuçlarını kullan)
+✅ İYİ (Başka bir örnek):
+"417 bin TL bedelli askerlik ücreti iddiası kontrol edildi. TRT Haber ve Hürriyet'te benzer rakamlarla haberler mevcut. TBMM web sitesinde bu konuda taslak görüşme kayıtları var. Rakam 2026 ekonomik koşulları için makul, ancak henüz resmi onay aşamasında."
+
+✅ İYİ (Yalan haber örneği):
+"İddia edilen kişinin ölümü ile ilgili hiçbir resmi kaynak bulunamadı. NewsAPI'de son 24 saatteki taramada bu isimle ilgili hiçbir ölüm haberi yok. Google Fact Check'te de benzer iddialar daha önce 'yanlış' olarak işaretlenmiş. Bu tür şok haberlerin kaynak gösterilmeden yayılması tipik dezenformasyon örneğidir."
+
+4. DEĞERLENDİRME KRİTERLERİ:
+
+   KAYNAK (0-20):
+   - Kaç kaynak bulundu? Hangileri?
    - Kaynaklar güvenilir mi?
-
-2. MANTIKSAL TUTARLILIK (0-20):
-   - Rakam makul aralıkta mı?
-   - Türkiye için mantıklı mı?
-
-3. GERÇEK DÜNYA UYUMU (0-20):
-   - Benzer gelişmeler oldu mu?
-   - Güncel politikalara uygun mu?
-
-4. DİL VE ÜSLUP (0-20):
-   - Haber dili mi, clickbait mi?
-
-5. DOĞRULANABİLİRLİK (0-20):
-   - Spesifik bilgi var mı?
-   - Tarih, rakam, kurum adı var mı?
+   
+   MANTIK (0-20):
+   - Rakamlar makul mü?
+   - Fiziksel olarak mümkün mü?
+   
+   GERÇEKÇILIK (0-20):
+   - Güncel olaylarla uyumlu mu?
+   - Benzer haberler var mı?
+   
+   DİL (0-20):
+   - Clickbait mi, haber dili mi?
+   - Abartılı ifadeler var mı?
+   
+   DOĞRULANABİLİRLİK (0-20):
+   - Tarih, rakam, isim var mı?
+   - Kaynak belirtilmiş mi?
 
 JSON YANIT:
 {
-  "credibility": <0-100 arası puan - SCRAPING SONUÇLARINA GÖRE>,
-  "verified": <true (60+), false (<60)>,
-  "reasoning": "<Yukarıdaki yapıya göre detaylı açıklama - SCRAPING SONUÇLARINI KULLAN>",
-  "source_found": "<Hangi kaynaklarda bulundu - scraping sonuçlarından al>",
-  "red_flags": [<şüpheli noktalar, varsa>],
+  "credibility": <0-100 arası puan>,
+  "verified": <true/false (60+ = true)>,
+  "reasoning": "<Her claim için ÖZEL ve FARKLI analiz - şablon kullanma!>",
+  "source_found": "<Bulunan gerçek kaynak isimleri veya 'Kaynak bulunamadı'>",
+  "red_flags": [<spesifik şüpheli noktalar>],
   "scores": {
     "source": <0-20>,
     "logic": <0-20>,
@@ -143,6 +158,8 @@ JSON YANIT:
     "verifiability": <0-20>
   }
 }
+
+ÖNEMLİ: Her habere özel, yaratıcı ve farklı bir analiz yap! Şablon cümle kullanma!
 
 SADECE JSON döndür.`;
 }

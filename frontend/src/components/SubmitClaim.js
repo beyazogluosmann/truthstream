@@ -91,14 +91,14 @@ function SubmitClaim() {
       if (response.success) {
         setMessage({ 
           type: 'success', 
-          text: ' Haber gönderildi! Sonuçlar sayfasına yönlendiriliyorsunuz...'
+          text: '✅ Haber doğrulanıyor... Lütfen bekleyin!'
         });
         setFormData({ text: '' });
         
-        // 2 saniye sonra dashboard'a yönlendir
+        // 3 saniye sonra dashboard'a yönlendir
         setTimeout(() => {
           navigate('/dashboard');
-        }, 2000);
+        }, 3000);
       }
     } catch (error) {
       // Handle rate limiting error specially
@@ -196,7 +196,7 @@ function SubmitClaim() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="text-lg">AI Analiz Ediyor...</span>
+                    <span className="text-lg">Doğrulanıyor...</span>
                   </>
                 ) : (
                   <>
