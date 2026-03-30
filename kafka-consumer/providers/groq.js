@@ -15,14 +15,14 @@ const groq = new Groq({
 });
 
 /**
- * Verify claim using Groq AI
+ * Verify claim using Groq AI with web scraper context
  * @param {string} claimText - Text to verify
- * @param {string} newsContext - News search results context
+ * @param {string} scraperContext - Context from web scrapers
  * @returns {Promise<Object>} Verification result
  */
-async function verifyWithGroq(claimText, newsContext = '') {
+async function verifyWithGroq(claimText, scraperContext = '') {
   try {
-    const prompt = generatePrompt(claimText, newsContext);
+    const prompt = generatePrompt(claimText, scraperContext);
     
     const chatCompletion = await groq.chat.completions.create({
       messages: [
@@ -71,60 +71,70 @@ async function verifyWithGroq(claimText, newsContext = '') {
   }
 }
 
-function generatePrompt(text, newsContext = '') {
-  return `Sen profesyonel bir haber doğrulama uzmanısın. Aşağıdaki haberi DİKKATLE analiz et:
+function generatePrompt(text, scraperContext) {
+  return `Sen profesyonel bir haber doğrulama uzmanısın. Aşağıdaki haberi analiz et:
 
 HABER: "${text}"
 
-${newsContext}
+${scraperContext ? `\n${scraperContext}\n` : ''}
 
-ÖNEMLİ UYARILAR:
-- Bu bir GÜNCEL HABER olabilir, eski bilgilerinle çelişebilir
-- Eğer haber güncel bir gelişme, resmi açıklama veya yasa değişikliğinden bahsediyorsa, bunu DİKKATE AL
-- "Henüz teyit edilmemiş" veya "onay bekliyor" gibi durumları BELİRT
-- Kesin yanlış demeden önce haberin GÜNCELLİK durumunu değerlendir
+ÇOK ÖNEMLİ KURALLAR:
 
-DEĞERLENDİRME KRİTERLERİ:
+1. WEB SCRAPING SONUÇLARINI KULLAN:
+   - Eğer haber BBC, Reuters, CNN'de bulunduysa → YÜKSEK PUAN (75-90)
+   - Google Fact Check'te doğrulandıysa → ÇOK YÜKSEK PUAN (85-95)
+   - Türk haber kaynaklarında bulunduysa → ORTA-YÜKSEK PUAN (70-85)
+   - HİÇBİR KAYNAKTA YOKSA → DÜŞÜK PUAN (10-30)
 
-1. KAYNAK GÜVENİLİRLİĞİ (0-20 puan)
-   - Haber aktüel bir gelişme mi yoksa komplo teorisi mi?
-   - Güncel yasal değişiklik, resmi açıklama söz konusu mu?
-   - Eğer güncel bir politika/yasa değişikliğiyse: "Bu güncel bir gelişme, henüz tamamlanmamış olabilir"
-   - Eğer tamamen uydurma: "Hiçbir resmi kaynakta bu bilgi yok"
+2. KAYNAK DEĞERLENDİRME:
+   - Resmi kaynaklarda (TBMM, Resmi Gazete) → 85-100
+   - Büyük haber ajanslarında (BBC, Reuters, AFP) → 75-90
+   - Ulusal haber kanallarında (TRT, CNN Türk) → 70-85
+   - Sadece sosyal medyada → 10-30
 
-2. MANTIKSAL TUTARLILIK (0-20 puan)
-   - İddia mantıklı mı? Çelişki var mı?
-   - Makul bir gelişme olabilir mi?
-   - Örnek: "Asgari ücret artışı makul, bedelli askerlik ücreti artışı da olağan"
+3. RAKAM MANTIK KONTROLÜ:
+   - Spesifik rakam var ve makul mu değerlendir
+   - Türkiye ekonomisi ve güncel politikalarla uyumlu mu?
+   - Abartılı veya mantıksız değerler şüphelidir
 
-3. GERÇEK DÜNYA UYUMU (0-20 puan)
-   - BİLİNEN gerçeklerle uyumlu mu?
-   - GÜNCEL GELİŞMELER varsa bunu belirt
-   - "Bu rakam 2026 için açıklanmış olabilir ama henüz resmiyet kazanmamış"
-   - Sayılar mantıklı aralıkta mı? (örn: 417 bin TL bedelli için mantıklı)
+4. REASONING YAPISI - ÇOK ÖNEMLİ:
+   a) İlk cümle: Haberin özeti
+   b) İkinci cümle: HANGİ KAYNAKLARDA BULUNDU (scraping sonuçlarını kullan!)
+   c) Üçüncü cümle: KAYNAKLARIN GÜVENİLİRLİĞİ
+   d) Dördüncü cümle: RAKAM ANALİZİ (varsa)
+   e) Son cümle: KESİN SONUÇ (olabilir kullanma!)
 
-4. DİL VE ÜSLUP (0-20 puan)
-   - Nötr mu? Abartılı mı?
-   - Clickbait tarzı mı yoksa haber dili mi?
+ÖRNEK REASONING:
+"Bu haber bedelli askerlik ücretinin 417 bin TL'ye çıktığını iddia ediyor. Web scraping sonucunda bu haber BBC, Reuters ve TRT Haber'de bulundu. Büyük uluslararası ve ulusal kaynakların bu haberi vermesi güvenilirliği artırıyor. 417 bin TL rakamı, 2026 ekonomik koşulları ve önceki bedelli askerlik ücretleri göz önüne alındığında makul bir rakamdır. Bu güncel bir politika değişikliği ve doğru bir haber."
 
-5. DOĞRULANABİLİRLİK (0-20 puan)
+DEĞERLENDİRME:
+
+1. KAYNAK GÜVENİLİRLİĞİ (0-20):
+   - Hangi kaynaklarda bulundu? (scraping sonuçlarını kullan)
+   - Kaynaklar güvenilir mi?
+
+2. MANTIKSAL TUTARLILIK (0-20):
+   - Rakam makul aralıkta mı?
+   - Türkiye için mantıklı mı?
+
+3. GERÇEK DÜNYA UYUMU (0-20):
+   - Benzer gelişmeler oldu mu?
+   - Güncel politikalara uygun mu?
+
+4. DİL VE ÜSLUP (0-20):
+   - Haber dili mi, clickbait mi?
+
+5. DOĞRULANABİLİRLİK (0-20):
    - Spesifik bilgi var mı?
-   - Henüz doğrulanamayan ama MUHTEMEL gelişmeler için: orta puan ver
-   - Tamamen uydurma için: düşük puan
+   - Tarih, rakam, kurum adı var mı?
 
-PUANLAMA YAKLAŞIMI:
-- GÜNCEL HABERLER: Eğer makul bir gelişmeyse 50-70 arası (belirsiz ama olası)
-- DOĞRULANMIŞ HABERLER: 70-100 arası
-- YALAN/UYDURMA: 0-30 arası
-- ŞÜPHELİ AMA OLABİLİR: 40-60 arası
-
-JSON FORMATINDA YANIT VER:
+JSON YANIT:
 {
-  "credibility": <0-100 arası toplam puan>,
-  "verified": <true veya false (60 üzeri true)>,
-  "reasoning": "<DOĞAL DİLDE 4-5 cümle. 'Bu haber güncel bir gelişme olabilir' veya 'Henüz resmi onay yok' veya 'Tamamen yanlış' gibi NET ifadeler kullan. Sayıların mantıklılığını değerlendir.>",
-  "source_found": "<'Güncel gelişme - henüz teyit edilmemiş' veya 'Resmi kaynaklarda onaylanmış' veya 'Hiçbir kaynakta bulunamadı'>",
-  "red_flags": ["<spesifik şüpheli nokta>"],
+  "credibility": <0-100 arası puan - SCRAPING SONUÇLARINA GÖRE>,
+  "verified": <true (60+), false (<60)>,
+  "reasoning": "<Yukarıdaki yapıya göre detaylı açıklama - SCRAPING SONUÇLARINI KULLAN>",
+  "source_found": "<Hangi kaynaklarda bulundu - scraping sonuçlarından al>",
+  "red_flags": [<şüpheli noktalar, varsa>],
   "scores": {
     "source": <0-20>,
     "logic": <0-20>,

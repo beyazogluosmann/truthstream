@@ -1,46 +1,43 @@
 /**
- * Multi-AI Verification System
- * Orchestrates multiple AI providers and calculates consensus
+ * Multi-AI Verification System with Web Scraping
+ * Orchestrates web scrapers and AI providers
  */
 
 const { verifyWithGroq } = require('./providers/groq');
-const { verifyWithGemini } = require('./providers/gemini');
-const { searchNewsForClaim, formatNewsResultsForAI } = require('./news-search');
+const { runAllScrapers } = require('./scraper-orchestrator');
 
 // Configuration
-const ENABLED_PROVIDERS = ['groq', 'gemini'];
+const ENABLED_PROVIDERS = ['groq'];
 const PROVIDER_WEIGHTS = {
-  groq: 0.5,          // 50% - Fastest and most reliable
-  gemini: 0.5         // 50%
+  groq: 1.0          // 100% - Only provider
 };
 const MIN_SUCCESSFUL_PROVIDERS = 1; // Minimum providers that must succeed
 const TIMEOUT_MS = 25000; // 25 seconds timeout per provider
 
 /**
- * Verify claim with multiple AI providers in parallel
+ * Verify claim with web scraping + AI analysis
  * @param {Object} claim - Claim object with text, category, source
  * @returns {Promise<Object>} Verified claim with consensus analysis
  */
 async function verifyClaimWithMultiAI(claim) {
-  console.log(`\n🤖 Multi-AI Verification Started`);
-  console.log(`   Providers: ${ENABLED_PROVIDERS.join(', ')}`);
+  console.log(`\n[Multi-AI] Verification Started`);
+  console.log(`   Claim: "${claim.text.substring(0, 60)}..."`);
   
   const startTime = Date.now();
   
-  // Step 1: Search real news sources
-  const newsResults = await searchNewsForClaim(claim.text);
-  const newsContext = formatNewsResultsForAI(newsResults);
+  // Step 1: Run web scrapers
+  const scraperResults = await runAllScrapers(claim.text);
   
-  // Step 2: Call all AI providers with news context
-  const providerResults = await callAllProviders(claim.text, newsContext);
+  // Step 2: Call AI with scraper context
+  const providerResults = await callAllProviders(claim.text, scraperResults.aiContext);
   
   // Filter successful results
   const successfulResults = providerResults.filter(r => r.success);
   const failedProviders = providerResults.filter(r => !r.success).map(r => r.provider);
   
-  console.log(`   ✓ Successful: ${successfulResults.length}/${providerResults.length}`);
+  console.log(`   [OK] Successful: ${successfulResults.length}/${providerResults.length}`);
   if (failedProviders.length > 0) {
-    console.log(`   ✗ Failed: ${failedProviders.join(', ')}`);
+    console.log(`   [FAIL] Failed: ${failedProviders.join(', ')}`);
   }
   
   // Check if we have enough successful providers
@@ -52,8 +49,8 @@ async function verifyClaimWithMultiAI(claim) {
   const consensus = calculateConsensus(successfulResults);
   
   const processingTime = Date.now() - startTime;
-  console.log(`   ⏱️  Processing time: ${processingTime}ms`);
-  console.log(`   📊 Consensus credibility: ${consensus.credibility}%`);
+  console.log(`   [TIME] Total processing time: ${processingTime}ms`);
+  console.log(`   [SCORE] Consensus credibility: ${consensus.credibility}%`);
   
   // Build final verified claim
   return {
@@ -64,18 +61,19 @@ async function verifyClaimWithMultiAI(claim) {
     submitted_at: claim.submitted_at || new Date().toISOString(),
     verified_at: new Date().toISOString(),
     
-    // News search results
-    news_search: {
-      found: newsResults.found,
-      total_results: newsResults.total_results,
-      sources: newsResults.sources.map(s => s.source),
-      message: newsResults.message
-    },
-    
     // Consensus results
     credibility: consensus.credibility,
     verified: consensus.verified,
     confidence_score: consensus.confidence_score,
+    
+    // Web scraping results
+    web_sources: {
+      found: scraperResults.combined.foundAnywhere,
+      total_sources: scraperResults.combined.totalSources,
+      sources: scraperResults.combined.sources,
+      breakdown: scraperResults.combined.breakdown,
+      scraping_time_ms: scraperResults.processingTime
+    },
     
     // Multi-AI specific data
     ai_consensus: {
@@ -101,20 +99,19 @@ async function verifyClaimWithMultiAI(claim) {
     // Legacy fields for backward compatibility
     ai_reasoning: consensus.reasoning,
     red_flags: consensus.combined_red_flags,
-    source_found: consensus.source_found || 'Multiple sources analyzed'
+    source_found: generateSourceSummary(scraperResults)
   };
 }
 
 /**
- * Call all enabled AI providers in parallel
+ * Call all enabled AI providers with scraper context
  * @param {string} claimText - Text to verify
- * @param {string} newsContext - News search results context
+ * @param {string} scraperContext - Context from web scrapers
  * @returns {Promise<Array>} Array of provider results
  */
-async function callAllProviders(claimText, newsContext) {
+async function callAllProviders(claimText, scraperContext) {
   const providerFunctions = {
-    groq: verifyWithGroq,
-    gemini: verifyWithGemini
+    groq: verifyWithGroq
   };
   
   const promises = ENABLED_PROVIDERS.map(async (providerName) => {
@@ -124,15 +121,15 @@ async function callAllProviders(claimText, newsContext) {
         throw new Error(`Provider ${providerName} not found`);
       }
       
-      // Add timeout and pass news context
+      // Pass scraper context to AI
       const result = await Promise.race([
-        providerFn(claimText, newsContext),
+        providerFn(claimText, scraperContext),
         timeoutPromise(TIMEOUT_MS, providerName)
       ]);
       
       return result;
     } catch (error) {
-      console.error(`   ✗ ${providerName} failed:`, error.message);
+      console.error(`   [ERROR] ${providerName} failed:`, error.message);
       return {
         provider: providerName,
         success: false,
@@ -240,6 +237,21 @@ function combineRedFlags(results) {
   
   // Remove duplicates
   return [...new Set(allFlags)];
+}
+
+/**
+ * Generate source summary from scraper results
+ * @param {Object} scraperResults - Scraper results
+ * @returns {string} Source summary
+ */
+function generateSourceSummary(scraperResults) {
+  const { combined } = scraperResults;
+  
+  if (!combined.foundAnywhere) {
+    return 'Web aramasında hiçbir güvenilir kaynakta bu haber bulunamadı.';
+  }
+  
+  return `${combined.totalSources} farklı kaynakta bulundu: ${combined.sources.join(', ')}`;
 }
 
 /**
