@@ -15,16 +15,22 @@ const NEWS_API_URL = 'https://newsapi.org/v2/everything';
  * @returns {Promise<Object>} Search results
  */
 async function searchNewsAPI(claimText) {
+  console.log('\n[NewsAPI] === API TEST START ===');
+  console.log('[NewsAPI] API Key:', NEWS_API_KEY ? `${NEWS_API_KEY.substring(0, 15)}...` : '❌ NOT FOUND');
+  
   if (!NEWS_API_KEY) {
-    console.log('[NewsAPI] API key not configured, skipping');
+    console.log('[NewsAPI] ❌ API key not configured, skipping');
     return { found: false, articles: [], sources: [] };
   }
 
   try {
-    console.log(`[NewsAPI] Searching for: "${claimText.substring(0, 50)}..."`);
+    console.log(`[NewsAPI] 🔍 Searching for: "${claimText.substring(0, 50)}..."`);
     
     // Extract keywords from claim
     const keywords = extractKeywords(claimText);
+    console.log(`[NewsAPI] 🔑 Keywords: "${keywords}"`);
+    console.log(`[NewsAPI] 📡 Sending request to: ${NEWS_API_URL}`);
+    console.log(`[NewsAPI] 📋 Params: language=en, sortBy=relevancy, pageSize=5`);
     
     const response = await axios.get(NEWS_API_URL, {
       params: {
@@ -37,15 +43,20 @@ async function searchNewsAPI(claimText) {
       timeout: 5000
     });
 
+    console.log(`[NewsAPI] ✅ Response Status: ${response.status}`);
+    console.log(`[NewsAPI] 📊 Total Results Available: ${response.data.totalResults || 0}`);
+
     const articles = response.data.articles || [];
     
     if (articles.length === 0) {
-      console.log('[NewsAPI] No articles found');
+      console.log('[NewsAPI] ⚠️  No articles found');
       return { found: false, articles: [], sources: [] };
     }
 
     const sources = [...new Set(articles.map(a => a.source.name))];
-    console.log(`[NewsAPI] Found ${articles.length} articles from: ${sources.join(', ')}`);
+    console.log(`[NewsAPI] ✅ SUCCESS! Found ${articles.length} articles`);
+    console.log(`[NewsAPI] 📰 Sources: ${sources.join(', ')}`);
+    console.log('[NewsAPI] === API TEST END ===\n');
 
     return {
       found: true,
@@ -61,7 +72,12 @@ async function searchNewsAPI(claimText) {
     };
 
   } catch (error) {
-    console.error('[NewsAPI] Error:', error.message);
+    console.error('[NewsAPI] ❌ ERROR:', error.message);
+    if (error.response) {
+      console.error('[NewsAPI] ❌ Status Code:', error.response.status);
+      console.error('[NewsAPI] ❌ Response:', JSON.stringify(error.response.data).substring(0, 200));
+    }
+    console.log('[NewsAPI] === API TEST END (FAILED) ===\n');
     return { found: false, articles: [], sources: [], error: error.message };
   }
 }

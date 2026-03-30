@@ -15,13 +15,18 @@ const FACT_CHECK_URL = 'https://factchecktools.googleapis.com/v1alpha1/claims:se
  * @returns {Promise<Object>} Fact check results
  */
 async function searchFactCheck(claimText) {
+  console.log('\n[FactCheck] === API TEST START ===');
+  console.log('[FactCheck] API Key:', FACT_CHECK_API_KEY ? `${FACT_CHECK_API_KEY.substring(0, 20)}...` : '❌ NOT FOUND');
+  
   if (!FACT_CHECK_API_KEY) {
-    console.log('[FactCheck] API key not configured, skipping');
+    console.log('[FactCheck] ❌ API key not configured, skipping');
     return { found: false, claims: [] };
   }
 
   try {
-    console.log(`[FactCheck] Searching Google Fact Check: "${claimText.substring(0, 50)}..."`);
+    console.log(`[FactCheck] 🔍 Searching Google Fact Check: "${claimText.substring(0, 50)}..."`);
+    console.log(`[FactCheck] 📡 API URL: ${FACT_CHECK_URL}`);
+    console.log(`[FactCheck] 🌐 Language: tr`);
     
     const response = await axios.get(FACT_CHECK_URL, {
       params: {
@@ -32,14 +37,22 @@ async function searchFactCheck(claimText) {
       timeout: 5000
     });
 
+    console.log(`[FactCheck] ✅ Response Status: ${response.status}`);
+    
     const claims = response.data.claims || [];
+    console.log(`[FactCheck] 📊 Total Claims Found: ${claims.length}`);
     
     if (claims.length === 0) {
-      console.log('[FactCheck] No fact-checks found');
+      console.log('[FactCheck] ⚠️  No fact-checks found');
+      console.log('[FactCheck] === API TEST END ===\n');
       return { found: false, claims: [] };
     }
 
-    console.log(`[FactCheck] Found ${claims.length} fact-check(s)`);
+    console.log(`[FactCheck] ✅ SUCCESS! Found ${claims.length} fact-check(s)`);
+    if (claims.length > 0 && claims[0].claimReview) {
+      console.log(`[FactCheck] 📰 First Publisher: ${claims[0].claimReview[0]?.publisher?.name || 'N/A'}`);
+    }
+    console.log('[FactCheck] === API TEST END ===\n');
 
     return {
       found: true,
@@ -56,7 +69,12 @@ async function searchFactCheck(claimText) {
     };
 
   } catch (error) {
-    console.error('[FactCheck] Error:', error.message);
+    console.error('[FactCheck] ❌ ERROR:', error.message);
+    if (error.response) {
+      console.error('[FactCheck] ❌ Status Code:', error.response.status);
+      console.error('[FactCheck] ❌ Response:', JSON.stringify(error.response.data).substring(0, 200));
+    }
+    console.log('[FactCheck] === API TEST END (FAILED) ===\n');
     return { found: false, claims: [], error: error.message };
   }
 }

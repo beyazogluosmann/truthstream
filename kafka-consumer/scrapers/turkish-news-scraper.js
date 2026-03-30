@@ -18,9 +18,12 @@ const TURKISH_SOURCES = {
  * @returns {Promise<Object>} Search results
  */
 async function searchTurkishNews(claimText) {
-  console.log(`[TurkishNews] Searching Turkish sources: "${claimText.substring(0, 50)}..."`);
+  console.log('\n[TurkishNews] === MOCK SCRAPER START ===');
+  console.log(`[TurkishNews] 🔍 Searching Turkish sources: "${claimText.substring(0, 50)}..."`);
   
   const keywords = extractKeywords(claimText);
+  console.log(`[TurkishNews] 🔑 Keywords: ${keywords.join(', ')}`);
+  console.log('[TurkishNews] ℹ️  Note: This is a MOCK scraper (no real API)');
   const results = [];
 
   // Simple keyword matching simulation
@@ -32,9 +35,12 @@ async function searchTurkishNews(claimText) {
     // 3. Or use a web scraping service
     
     const mockResults = generateMockResults(keywords, claimText);
+    console.log(`[TurkishNews] 🎭 Mock analysis complete`);
     
     if (mockResults.length > 0) {
-      console.log(`[TurkishNews] Found ${mockResults.length} potential matches`);
+      console.log(`[TurkishNews] ✅ Found ${mockResults.length} potential matches (MOCK)`);
+      console.log(`[TurkishNews] 📰 Mock Sources: ${mockResults.map(r => r.source).join(', ')}`);
+      console.log('[TurkishNews] === MOCK SCRAPER END ===\n');
       return {
         found: true,
         total: mockResults.length,
@@ -43,11 +49,13 @@ async function searchTurkishNews(claimText) {
       };
     }
 
-    console.log('[TurkishNews] No matches found');
+    console.log('[TurkishNews] ⚠️  No matches found (not relevant to Turkish news)');
+    console.log('[TurkishNews] === MOCK SCRAPER END ===\n');
     return { found: false, articles: [], sources: [] };
 
   } catch (error) {
-    console.error('[TurkishNews] Error:', error.message);
+    console.error('[TurkishNews] ❌ ERROR:', error.message);
+    console.log('[TurkishNews] === MOCK SCRAPER END (FAILED) ===\n');
     return { found: false, articles: [], sources: [], error: error.message };
   }
 }
