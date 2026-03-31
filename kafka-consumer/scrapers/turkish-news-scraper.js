@@ -1,61 +1,104 @@
 /**
  * Turkish News Sources Scraper
- * Searches Turkish news sites: TRT, CNN Türk, Hürriyet, Sözcü
+ * Searches Turkish news sites via RSS feeds: TRT, Sözcü, Cumhuriyet, Habertürk
  */
 
-const axios = require('axios');
+const Parser = require('rss-parser');
+const parser = new Parser({
+  timeout: 10000,
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+  }
+});
 
-const TURKISH_SOURCES = {
-  trt: 'https://www.trthaber.com',
-  cnnturk: 'https://www.cnnturk.com',
-  hurriyet: 'https://www.hurriyet.com.tr',
-  sozcu: 'https://www.sozcu.com.tr'
+// Turkish news RSS feeds
+const RSS_FEEDS = {
+  'TRT Haber': 'https://www.trthaber.com/xml_mobile.rss',
+  'Sözcü': 'https://www.sozcu.com.tr/feed/',
+  'Cumhuriyet': 'https://www.cumhuriyet.com.tr/rss',
+  'Habertürk': 'https://www.haberturk.com/rss'
 };
 
 /**
- * Search Turkish news sources
+ * Search Turkish news sources via RSS
  * @param {string} claimText - Claim to search
  * @returns {Promise<Object>} Search results
  */
 async function searchTurkishNews(claimText) {
-  console.log('\n[TurkishNews] === MOCK SCRAPER START ===');
-  console.log(`[TurkishNews] 🔍 Searching Turkish sources: "${claimText.substring(0, 50)}..."`);
+  console.log('\n[TurkishNews] === RSS SCRAPER START ===');
+  console.log(`[TurkishNews] 🔍 Searching Turkish RSS feeds: "${claimText.substring(0, 50)}..."`);
   
   const keywords = extractKeywords(claimText);
   console.log(`[TurkishNews] 🔑 Keywords: ${keywords.join(', ')}`);
-  console.log('[TurkishNews] ℹ️  Note: This is a MOCK scraper (no real API)');
+  
   const results = [];
 
-  // Simple keyword matching simulation
-  // In production, you'd use actual site APIs or RSS feeds
   try {
-    // This is a placeholder - in real implementation you'd:
-    // 1. Use RSS feeds from these sites
-    // 2. Or use their search APIs if available
-    // 3. Or use a web scraping service
+    // Search each RSS feed in parallel
+    const feedPromises = Object.entries(RSS_FEEDS).map(async ([source, url]) => {
+      try {
+        console.log(`[TurkishNews] 📡 Fetching ${source}...`);
+        const feed = await parser.parseURL(url);
+        
+        // Search in recent articles (last 50)
+        const matches = feed.items.slice(0, 50).filter(item => {
+          const title = item.title?.toLowerCase() || '';
+          const desc = (item.contentSnippet || item.content || '').toLowerCase();
+          const content = title + ' ' + desc;
+          
+          // Check if at least 2 keywords match
+          const matchCount = keywords.filter(keyword => 
+            content.includes(keyword.toLowerCase())
+          ).length;
+          
+          return matchCount >= Math.min(2, keywords.length);
+        });
+        
+        if (matches.length > 0) {
+          console.log(`[TurkishNews] ✅ Found ${matches.length} matches in ${source}`);
+          
+          return matches.slice(0, 3).map(match => ({
+            title: match.title,
+            source: source,
+            url: match.link,
+            description: (match.contentSnippet || match.content || '').substring(0, 200),
+            publishedAt: match.pubDate || match.isoDate,
+            confidence: 'high'
+          }));
+        }
+        
+        return [];
+      } catch (err) {
+        console.log(`[TurkishNews] ⚠️  ${source} failed: ${err.message}`);
+        return [];
+      }
+    });
     
-    const mockResults = generateMockResults(keywords, claimText);
-    console.log(`[TurkishNews] 🎭 Mock analysis complete`);
+    // Wait for all feeds to be processed
+    const allResults = await Promise.all(feedPromises);
+    const flatResults = allResults.flat();
     
-    if (mockResults.length > 0) {
-      console.log(`[TurkishNews] ✅ Found ${mockResults.length} potential matches (MOCK)`);
-      console.log(`[TurkishNews] 📰 Mock Sources: ${mockResults.map(r => r.source).join(', ')}`);
-      console.log('[TurkishNews] === MOCK SCRAPER END ===\n');
+    if (flatResults.length > 0) {
+      const uniqueSources = [...new Set(flatResults.map(r => r.source))];
+      console.log(`[TurkishNews] ✅ Total: ${flatResults.length} articles found`);
+      console.log(`[TurkishNews] 📰 Sources: ${uniqueSources.join(', ')}`);
+      console.log('[TurkishNews] === RSS SCRAPER END ===\n');
+      
       return {
         found: true,
-        total: mockResults.length,
-        sources: mockResults.map(r => r.source),
-        articles: mockResults
+        total: flatResults.length,
+        sources: uniqueSources,
+        articles: flatResults.slice(0, 5) // Return top 5
       };
     }
 
-    console.log('[TurkishNews] ⚠️  No matches found (not relevant to Turkish news)');
-    console.log('[TurkishNews] === MOCK SCRAPER END ===\n');
+    console.log('[TurkishNews] ⚠️  No matches in RSS feeds');
+    console.log('[TurkishNews] === RSS SCRAPER END ===\n');
     return { found: false, articles: [], sources: [] };
 
   } catch (error) {
     console.error('[TurkishNews] ❌ ERROR:', error.message);
-    console.log('[TurkishNews] === MOCK SCRAPER END (FAILED) ===\n');
+    console.log('[TurkishNews] === RSS SCRAPER END (FAILED) ===\n');
     return { found: false, articles: [], sources: [], error: error.message };
   }
 }
@@ -66,103 +109,14 @@ async function searchTurkishNews(claimText) {
  * @returns {Array} Keywords
  */
 function extractKeywords(text) {
-  const stopWords = ['bir', 'bu', 'şu', 'o', 've', 'veya', 'için', 'ile', 'oldu', 'olacak', 'edildi', 'dedi'];
+  const stopWords = ['bir', 'bu', 'şu', 'o', 've', 'veya', 'için', 'ile', 'oldu', 'olacak', 'edildi', 'dedi', 'gibi', 'daha', 'çok', 'tüm'];
   
   return text
     .toLowerCase()
     .replace(/[^\wğüşıöçĞÜŞİÖÇ\s]/g, ' ')
     .split(/\s+/)
-    .filter(word => word.length > 3 && !stopWords.includes(word));
-}
-
-/**
- * Generate mock results based on keywords
- * In production, replace with actual API calls or RSS parsing
- */
-function generateMockResults(keywords, claimText) {
-  const relevanceCheck = checkRelevance(claimText);
-  
-  if (!relevanceCheck.isRelevant) {
-    return [];
-  }
-
-  // Spor haberleri için özel kontrol
-  const sportTeams = ['fenerbahçe', 'galatasaray', 'beşiktaş', 'trabzonspor'];
-  const isSportsNews = sportTeams.some(team => claimText.toLowerCase().includes(team));
-
-  // Ekonomi haberleri için özel kontrol
-  const economicKeywords = ['asgari ücret', 'lira', 'tl', 'bedelli', 'enflasyon', 'döviz'];
-  const isEconomicNews = economicKeywords.some(keyword => claimText.toLowerCase().includes(keyword));
-
-  const mockArticles = [];
-
-  if (isSportsNews) {
-    mockArticles.push({
-      title: `Spor haberi: ${keywords.slice(0, 5).join(' ')}`,
-      source: 'Hürriyet Spor',
-      url: 'https://www.hurriyet.com.tr/spor',
-      description: 'Türk spor basınında bu konuda haberler mevcut.',
-      confidence: 'high',
-      category: 'sports'
-    });
-    mockArticles.push({
-      title: `İlgili transfer/takım haberi`,
-      source: 'Fanatik',
-      url: 'https://www.fanatik.com.tr',
-      description: 'Spor medyasında benzer gelişmeler rapor edildi.',
-      confidence: 'high',
-      category: 'sports'
-    });
-  }
-
-  if (isEconomicNews) {
-    mockArticles.push({
-      title: `Ekonomi haberi: ${keywords.slice(0, 5).join(' ')}`,
-      source: 'Hürriyet Ekonomi',
-      url: 'https://www.hurriyet.com.tr/ekonomi',
-      description: 'Ekonomi basınında bu gelişme takip ediliyor.',
-      confidence: 'high',
-      category: 'economy'
-    });
-  }
-
-  if (relevanceCheck.confidence === 'high' && mockArticles.length === 0) {
-    mockArticles.push({
-      title: `Güncel Türkiye haberi: ${keywords.slice(0, 5).join(' ')}`,
-      source: 'TRT Haber',
-      url: 'https://www.trthaber.com',
-      description: `Türk haber kaynaklarında "${relevanceCheck.matchedIndicators.join(', ')}" ile ilgili içerik mevcut.`,
-      confidence: relevanceCheck.confidence,
-      category: 'general'
-    });
-  }
-
-  return mockArticles;
-}
-
-/**
- * Check if claim is relevant to Turkish news
- */
-function checkRelevance(claimText) {
-  const turkishIndicators = [
-    // Genel
-    'türkiye', 'ankara', 'istanbul', 'cumhurbaşkanı', 'meclis', 'tbmm',
-    // Ekonomi
-    'asgari', 'ücret', 'lira', 'tl', 'bedelli', 'askerlik', 'bakanlık',
-    // Spor takımları
-    'fenerbahçe', 'galatasaray', 'beşiktaş', 'trabzonspor', 'başakşehir',
-    // Şehirler
-    'izmir', 'bursa', 'antalya', 'adana', 'konya'
-  ];
-
-  const text = claimText.toLowerCase();
-  const matches = turkishIndicators.filter(indicator => text.includes(indicator));
-
-  return {
-    isRelevant: matches.length > 0,
-    confidence: matches.length > 2 ? 'high' : matches.length > 0 ? 'medium' : 'low',
-    matchedIndicators: matches
-  };
+    .filter(word => word.length > 2 && !stopWords.includes(word))
+    .slice(0, 10); // Limit to 10 keywords
 }
 
 /**
@@ -172,18 +126,21 @@ function checkRelevance(claimText) {
  */
 function formatTurkishNewsResults(results) {
   if (!results.found) {
-    return 'Türk haber kaynaklarında (TRT, CNN Türk, Hürriyet, Sözcü) bu iddia ile ilgili açık kayıt bulunamadı.';
+    return 'Türk haber kaynaklarının RSS feed\'lerinde (TRT, Sözcü, Cumhuriyet, Habertürk) bu iddia ile ilgili güncel kayıt bulunamadı.';
   }
 
-  let context = `Türk Haber Kaynakları: ${results.total} sonuç bulundu.\n`;
-  context += `Kaynaklar: ${[...new Set(results.sources)].join(', ')}\n\n`;
+  let context = `Türk Haber Kaynakları (RSS): ${results.total} sonuç bulundu.\n`;
+  context += `Kaynaklar: ${results.sources.join(', ')}\n\n`;
   
   results.articles.forEach((article, i) => {
     context += `${i + 1}. ${article.source}: "${article.title}"\n`;
     if (article.description) {
       context += `   ${article.description}\n`;
     }
-    context += '\n';
+    if (article.publishedAt) {
+      context += `   Tarih: ${article.publishedAt}\n`;
+    }
+    context += `   Link: ${article.url}\n\n`;
   });
 
   return context;
@@ -191,21 +148,29 @@ function formatTurkishNewsResults(results) {
 
 module.exports = { searchTurkishNews, formatTurkishNewsResults };
 
-
-// ...existing code...
-
 // Test code - only runs if file is executed directly
 if (require.main === module) {
   console.log('🧪 Testing Turkish News Scraper...\n');
   
-  const testClaim = "Fenerbahçe transfer haberi";
+  const testClaims = [
+    "Gaziantep'e füze düştü",
+    "Asgari ücret artışı",
+    "Fenerbahçe transfer haberi"
+  ];
   
-  searchTurkishNews(testClaim)
-    .then(results => {
-      console.log('\n📊 TEST RESULTS:');
+  async function runTests() {
+    for (const claim of testClaims) {
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`Testing: "${claim}"`);
+      console.log('='.repeat(60));
+      
+      const results = await searchTurkishNews(claim);
+      console.log('\n📊 RESULTS:');
       console.log(JSON.stringify(results, null, 2));
-    })
-    .catch(error => {
-      console.error('Test failed:', error);
-    });
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+  }
+  
+  runTests().catch(error => console.error('Test failed:', error));
 }
