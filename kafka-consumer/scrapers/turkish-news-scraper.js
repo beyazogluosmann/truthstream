@@ -190,3 +190,22 @@ function formatTurkishNewsResults(results) {
 }
 
 module.exports = { searchTurkishNews, formatTurkishNewsResults };
+
+
+// ...existing code...
+
+// Test code - only runs if file is executed directly
+if (require.main === module) {
+  console.log('🧪 Testing Turkish News Scraper...\n');
+  
+  const testClaim = "Fenerbahçe transfer haberi";
+  
+  searchTurkishNews(testClaim)
+    .then(results => {
+      console.log('\n📊 TEST RESULTS:');
+      console.log(JSON.stringify(results, null, 2));
+    })
+    .catch(error => {
+      console.error('Test failed:', error);
+    });
+}

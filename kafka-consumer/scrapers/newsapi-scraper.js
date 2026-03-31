@@ -4,7 +4,8 @@
  */
 
 const axios = require('axios');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
 const NEWS_API_URL = 'https://newsapi.org/v2/everything';
@@ -19,25 +20,25 @@ async function searchNewsAPI(claimText) {
   console.log('[NewsAPI] API Key:', NEWS_API_KEY ? `${NEWS_API_KEY.substring(0, 15)}...` : '❌ NOT FOUND');
   
   if (!NEWS_API_KEY) {
-    console.log('[NewsAPI] ❌ API key not configured, skipping');
+    console.log('[NewsAPI]  API key not configured, skipping');
     return { found: false, articles: [], sources: [] };
   }
 
   try {
-    console.log(`[NewsAPI] 🔍 Searching for: "${claimText.substring(0, 50)}..."`);
+    console.log(`[NewsAPI]  Searching for: "${claimText.substring(0, 50)}..."`);
     
     // Extract keywords from claim
     const keywords = extractKeywords(claimText);
-    console.log(`[NewsAPI] 🔑 Keywords: "${keywords}"`);
-    console.log(`[NewsAPI] 📡 Sending request to: ${NEWS_API_URL}`);
+    console.log(`[NewsAPI]  Keywords: "${keywords}"`);
+    console.log(`[NewsAPI]  Sending request to: ${NEWS_API_URL}`);
     
     // Detect language - Turkish or English
     const isTurkish = /[ğüşıöçĞÜŞİÖÇ]/.test(claimText) || 
                       /\b(türkiye|ankara|istanbul|fenerbahçe|galatasaray|beşiktaş)\b/i.test(claimText);
     
     const language = isTurkish ? 'tr' : 'en';
-    console.log(`[NewsAPI] 🌐 Detected language: ${language}`);
-    console.log(`[NewsAPI] 📋 Params: language=${language}, sortBy=relevancy, pageSize=10`);
+    console.log(`[NewsAPI]  Detected language: ${language}`);
+    console.log(`[NewsAPI]  Params: language=${language}, sortBy=relevancy, pageSize=10`);
     
     const response = await axios.get(NEWS_API_URL, {
       params: {
@@ -50,19 +51,19 @@ async function searchNewsAPI(claimText) {
       timeout: 5000
     });
 
-    console.log(`[NewsAPI] ✅ Response Status: ${response.status}`);
-    console.log(`[NewsAPI] 📊 Total Results Available: ${response.data.totalResults || 0}`);
+    console.log(`[NewsAPI]  Response Status: ${response.status}`);
+    console.log(`[NewsAPI]  Total Results Available: ${response.data.totalResults || 0}`);
 
     const articles = response.data.articles || [];
     
     if (articles.length === 0) {
-      console.log('[NewsAPI] ⚠️  No articles found');
+      console.log('[NewsAPI]   No articles found');
       return { found: false, articles: [], sources: [] };
     }
 
     const sources = [...new Set(articles.map(a => a.source.name))];
-    console.log(`[NewsAPI] ✅ SUCCESS! Found ${articles.length} articles`);
-    console.log(`[NewsAPI] 📰 Sources: ${sources.join(', ')}`);
+    console.log(`[NewsAPI]  SUCCESS! Found ${articles.length} articles`);
+    console.log(`[NewsAPI]  Sources: ${sources.join(', ')}`);
     console.log('[NewsAPI] === API TEST END ===\n');
 
     return {
@@ -79,10 +80,10 @@ async function searchNewsAPI(claimText) {
     };
 
   } catch (error) {
-    console.error('[NewsAPI] ❌ ERROR:', error.message);
+    console.error('[NewsAPI]  ERROR:', error.message);
     if (error.response) {
-      console.error('[NewsAPI] ❌ Status Code:', error.response.status);
-      console.error('[NewsAPI] ❌ Response:', JSON.stringify(error.response.data).substring(0, 200));
+      console.error('[NewsAPI]  Status Code:', error.response.status);
+      console.error('[NewsAPI]  Response:', JSON.stringify(error.response.data).substring(0, 200));
     }
     console.log('[NewsAPI] === API TEST END (FAILED) ===\n');
     return { found: false, articles: [], sources: [], error: error.message };
@@ -133,3 +134,21 @@ function formatNewsAPIResults(results) {
 }
 
 module.exports = { searchNewsAPI, formatNewsAPIResults };
+
+// Test code - only runs if file is executed directly
+if (require.main === module) {
+  console.log(' Testing NewsAPI Scraper...\n');
+  
+  const testClaim = "Fenerbahçe transfer haberi";
+  
+  searchNewsAPI(testClaim)
+    .then(results => {
+      console.log('\n TEST RESULTS:');
+      console.log(JSON.stringify(results, null, 2));
+    })
+    .catch(error => {
+      console.error('Test failed:', error);
+    });
+}
+
+

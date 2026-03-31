@@ -121,3 +121,38 @@ function formatFactCheckResults(results) {
 }
 
 module.exports = { searchFactCheck, formatFactCheckResults };
+
+
+// Test code - only runs if file is executed directly
+// ...existing code...
+
+// Test code - only runs if file is executed directly
+if (require.main === module) {
+  console.log('🧪 Testing Google FactCheck Scraper...\n');
+  
+  // Try different test claims
+  const testClaims = [
+    "Bill Gates microchip vaccine",
+    "5G koronavirüs yayıyor",
+    "climate change hoax"
+  ];
+  
+  async function runTests() {
+    for (const claim of testClaims) {
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`Testing claim: "${claim}"`);
+      console.log('='.repeat(60));
+      
+      const results = await searchFactCheck(claim);
+      console.log('\n📊 TEST RESULTS:');
+      console.log(JSON.stringify(results, null, 2));
+      
+      // Wait 1 second between requests
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  runTests().catch(error => {
+    console.error('Test failed:', error);
+  });
+}
