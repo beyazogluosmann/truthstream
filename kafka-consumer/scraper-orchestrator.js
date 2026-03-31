@@ -96,22 +96,54 @@ function combineScraperResults(newsAPI, factCheck, turkishNews) {
  * Generate AI context from all scraper results
  */
 function generateAIContext(newsAPI, factCheck, turkishNews) {
-  let context = '=== WEB SCRAPING SONUÇLARI ===\n\n';
+  let context = '\n=== WEB SCRAPING RESULTS ===\n\n';
 
-  // NewsAPI results
-  context += '1. ULUSLARARASI HABER KAYNAKLARI (BBC, Reuters, CNN):\n';
-  context += formatNewsAPIResults(newsAPI) + '\n';
+  // NewsAPI Results
+  if (newsAPI.found && newsAPI.articles?.length > 0) {
+    context += `📰 NewsAPI Results:\n`;
+    context += `Found ${newsAPI.total} articles from: ${newsAPI.sources.join(', ')}\n\n`;
+    newsAPI.articles.slice(0, 3).forEach((article, idx) => {
+      context += `${idx + 1}. "${article.title}"\n`;
+      context += `   Source: ${article.source}\n`;
+      context += `   Published: ${article.publishedAt}\n`;
+      context += `   URL: ${article.url}\n\n`;
+    });
+  } else {
+    context += `📰 NewsAPI Results: No articles found\n\n`;
+  }
 
-  // Google Fact Check results
-  context += '2. GOOGLE FACT CHECK VERİTABANI:\n';
-  context += formatFactCheckResults(factCheck) + '\n';
+  // Google Fact Check Results
+  if (factCheck.found && factCheck.claims?.length > 0) {
+    context += `✅ Google Fact Check Results:\n`;
+    context += `Found ${factCheck.total} fact-checks\n\n`;
+    factCheck.claims.slice(0, 3).forEach((claim, idx) => {
+      context += `${idx + 1}. Claim: "${claim.text}"\n`;
+      context += `   Rating: ${claim.rating}\n`;
+      context += `   Publisher: ${claim.publisher}\n`;
+      context += `   URL: ${claim.url}\n\n`;
+    });
+  } else {
+    context += `✅ Google Fact Check Results: No fact-checks found\n\n`;
+  }
 
-  // Turkish news results
-  context += '3. TÜRK HABER KAYNAKLARI (TRT, CNN Türk, Hürriyet, Sözcü):\n';
-  context += formatTurkishNewsResults(turkishNews) + '\n';
+  // Turkish News RSS Results
+  if (turkishNews.found && turkishNews.articles?.length > 0) {
+    context += `🇹🇷 Turkish News RSS Results:\n`;
+    context += `Found ${turkishNews.total} articles from: ${turkishNews.sources.join(', ')}\n\n`;
+    turkishNews.articles.slice(0, 3).forEach((article, idx) => {
+      context += `${idx + 1}. "${article.title}"\n`;
+      context += `   Source: ${article.source}\n`;
+      context += `   URL: ${article.url}\n\n`;
+    });
+  } else {
+    context += `🇹🇷 Turkish News RSS Results: No articles found\n\n`;
+  }
 
-  context += '=== SCRAPING TAMAMLANDI ===\n';
-  context += 'Yukarıdaki kaynaklarda bulunan bilgileri değerlendirerek haberin doğruluğunu analiz et.\n';
+  context += `=== END OF SCRAPING RESULTS ===\n`;
+
+  // ⚠️ DEBUG: Log context to verify it's being generated
+  console.log('\n[Scraper] Generated Context for AI:');
+  console.log(context.substring(0, 500) + '...');
 
   return context;
 }

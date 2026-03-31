@@ -1,14 +1,15 @@
 /**
  * Groq AI Provider (Llama 3.3 70B)
- * Fast and reliable fact-checking
+ * Fast and reliable fact-checking with HYBRID SCORING
  */
 
 const Groq = require('groq-sdk');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const AI_MODEL = 'llama-3.3-70b-versatile';
-const AI_TEMPERATURE = 0.3;
-const MAX_TOKENS = 1024;
+const AI_TEMPERATURE = 0.2; // Lower for more deterministic results
+const MAX_TOKENS = 2048; // Increased for detailed analysis
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
@@ -22,13 +23,17 @@ const groq = new Groq({
  */
 async function verifyWithGroq(claimText, scraperContext = '') {
   try {
-    const prompt = generatePrompt(claimText, scraperContext);
+    // Detect claim language
+    const claimLanguage = detectLanguage(claimText);
+    console.log(`[Groq] Detected language: ${claimLanguage}`);
+    
+    const prompt = generatePrompt(claimText, scraperContext, claimLanguage);
     
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: "Sen profesyonel bir haber doğrulama uzmanısın. SADECE JSON formatında yanıt ver."
+          content: "You are a world-class fact-checker working for Reuters, BBC Verify, and FactCheck.org. You analyze claims with extreme precision. You ONLY respond in JSON format."
         },
         {
           role: "user",
@@ -55,6 +60,7 @@ async function verifyWithGroq(claimText, scraperContext = '') {
       source_found: result.source_found || 'Unknown',
       red_flags: result.red_flags || [],
       scores: result.scores || {},
+      language: claimLanguage,
       raw_response: result
     };
     
@@ -71,93 +77,153 @@ async function verifyWithGroq(claimText, scraperContext = '') {
   }
 }
 
-function generatePrompt(text, scraperContext) {
-  return `Sen profesyonel bir haber doğrulama uzmanısın. Aşağıdaki haberi analiz et:
+/**
+ * Detect language of claim text
+ * @param {string} text - Claim text
+ * @returns {string} Language code ('tr' or 'en')
+ */
+function detectLanguage(text) {
+  // Turkish-specific characters and words
+  const turkishChars = /[ğüşıöçĞÜŞİÖÇ]/;
+  const turkishWords = /\b(ve|veya|ile|için|olan|oldu|olacak|etti|eden|bir|bu|şu|ancak|ama|fakat|çünkü|böyle|şöyle|gibi|diye|dedi|iddiası|haberi|gündemde)\b/i;
+  
+  // Check for Turkish indicators
+  if (turkishChars.test(text) || turkishWords.test(text)) {
+    return 'tr';
+  }
+  
+  return 'en';
+}
 
-HABER: "${text}"
+function generatePrompt(text, scraperContext, language = 'en') {
+  const languageInstruction = language === 'tr' 
+    ? 'IMPORTANT: The claim is in TURKISH. Write your reasoning in TURKISH. All other instructions remain in English.'
+    : 'IMPORTANT: The claim is in ENGLISH. Write your reasoning in ENGLISH.';
+  
+  return `You are an expert fact-checker. Analyze the following claim with extreme precision:
 
-${scraperContext ? `\n${scraperContext}\n` : ''}
+${languageInstruction}
 
-⚠️ KRİTİK KURAL: KAYNAK YOKSA = YÜKSEK İHTİMALLE YANLIŞ!
+CLAIM: "${text}"
 
-📊 PUAN ARALIKLARI:
-95-100: Kesinlikle doğru, KANITLI (web kaynağı var)
-85-94:  Muhtemelen doğru, mantıklı + kaynak var
-75-84:  Olası doğru, mantıklı ama kaynak yok
-65-74:  Belirsiz, kaynak yok + mantık zayıf
-50-64:  Şüpheli, kaynak yok + çelişki var
-0-49:   Kesinlikle yanlış, kaynak yok + mantıksız
+${scraperContext ? `${scraperContext}\n` : '\n=== WEB SCRAPING RESULTS ===\nNo web scraping data available.\n'}
 
-🎯 KARAR AKIŞI (SIRASINA DİKKAT ET!):
+⚠️ CRITICAL RULE: NO SOURCES = HIGHLY LIKELY FALSE!
 
-1️⃣ KAYNAK VAR MI?
-   ✅ VARSA → Minimum 85 puan (eğer mantıklıysa 95+)
-   ❌ YOKSA → 2️⃣'ye geç
+📊 CREDIBILITY SCORE RANGES:
+95-100: DEFINITELY TRUE - PROVEN (multiple web sources found)
+85-94:  PROBABLY TRUE - logical + sources found  
+75-84:  POSSIBLY TRUE - logical but NO sources
+65-74:  UNCERTAIN - no sources + weak logic
+50-64:  SUSPICIOUS - no sources + contradictions
+0-49:   DEFINITELY FALSE - no sources + illogical
 
-2️⃣ KAYNAK YOKSA → ÖZEL DURUMLAR:
+🎯 DECISION FLOW (FOLLOW PRECISELY!):
+
+STEP 1: CHECK FOR SOURCES IN SCRAPING RESULTS ABOVE
+   ✅ IF SOURCES FOUND (NewsAPI, FactCheck, or RSS) → Minimum score 85 (if logical, 95+)
+   ❌ IF NO SOURCES → Go to STEP 2
+
+STEP 2: NO SOURCES FOUND → CATEGORIZE CLAIM TYPE:
    
-   A) GÜNLÜK TÜRK HABERLERİ (Kaynak olmasa da mantıklı):
-      🏟️ SPOR HABERİ → 75-80 puan
-         - Takım: Fenerbahçe, Galatasaray, Beşiktaş
-         - Konu: Transfer, ayrılık, yeni imza
-         - Mantık: Türkiye'de her gün oluyor, normal
+   A) ROUTINE NEWS (Can be plausible without sources):
       
-      💰 EKONOMİ HABERİ → 70-75 puan
-         - Konu: Asgari ücret, TL, döviz, enflasyon
-         - Mantık: Bakanlık rutin açıklaması olabilir
+      🏟️ SPORTS NEWS → 75-80 points
+         Teams: Fenerbahçe, Galatasaray, Beşiktaş, Trabzonspor, Barcelona, Real Madrid, Manchester United
+         Topics: Transfer rumors, contract negotiations, player interest
+         Logic: These are DAILY occurrences in Turkish/European football
+         Example: "Fenerbahçe interested in signing Player X" → Plausible rumor, 75 pts
+      
+      💰 ECONOMY NEWS → 70-75 points
+         Topics: Minimum wage increases, TL exchange rates, inflation reports, salary adjustments
+         Logic: Government ministries make routine economic announcements
+         Example: "Minimum wage may increase to 25,000 TL" → Reasonable speculation, 70 pts
+      
+      🌍 INTERNATIONAL NEWS (BREAKING NEWS WINDOW) → 60-70 points
+         Topics: Wars, conflicts, political events, assassination attempts, major incidents
+         Logic: Breaking news takes 1-2 hours to reach databases. If claim uses breaking news language, it might be real but not yet indexed
+         IMPORTANT: Look for words like "iddiası" (claim), "gündemde" (on agenda), "haberi" (news report), "söylentisi" (rumor)
+         Example: "Netanyahu'ya suikast girişimi iddiası gündemde" → Breaking news format, 65 pts
+         Example: "ABD, İsrail ve İran arasında çatışmalar sürüyor" → Ongoing conflict (known context), 65 pts
    
-   B) ÖZEL DURUMLAR (Kaynak ZORUNLU):
-      ⚠️ ÜNLÜ KİŞİ ÖLÜMÜ → 0-15 puan
-         - Mantık: Bu haber MUTLAKA Twitter/medyada olurdu
-         - Sonuç: Kaynak yok = kesinlikle yalan
+   B) CRITICAL CLAIMS (Sources are MANDATORY):
       
-      ⚠️ ŞOK İDDİALAR → 0-20 puan
-         - Konu: Savaş, büyük olay, skandal
-         - Mantık: Bu haber MUTLAKA tüm medyada olurdu
-         - Sonuç: Kaynak yok = kesinlikle yalan
+      ⚠️ CELEBRITY/PUBLIC FIGURE DEATH → 0-15 points
+         Logic: Death of ANY known person would be IMMEDIATELY on Twitter, BBC, CNN, Reuters
+         Result: No sources = DEFINITELY FALSE
+         Example: "Actor X died" (stated as FACT) with NO web coverage = 5 points (fake news)
       
-      ⚠️ SPESIFIK İDDİALAR → 10-25 puan
-         - Örnek: "X kişisi Y takımından ayrıldı"
-         - Mantık: Gerçek olsa Fanatik, NTV Spor'da olurdu
-         - Sonuç: Kaynak yok = büyük ihtimalle yalan
+      ⚠️ MAJOR INCIDENTS (STATED AS CONFIRMED) → 0-20 points
+         Topics: "City destroyed", "1000 people died", "Nuclear explosion" stated as confirmed facts
+         Logic: Massive incidents would trigger INSTANT worldwide media coverage
+         Result: No sources = DEFINITELY FALSE
+         Example: "Earthquake destroyed Istanbul" (confirmed) with NO sources = 10 points (false)
+      
+      ⚠️ SPECIFIC NAMED CLAIMS → 10-25 points
+         Format: "Person X did Y" or "Entity A announced B" (as confirmed fact, not rumor)
+         Logic: Specific claims with names/details require verification
+         Result: No sources = HIGHLY LIKELY FALSE
+         Examples:
+           - "Arda Güler left Real Madrid" (confirmed) → If true, Marca, AS, Fanatik would report = 15 pts
+           - "Minister X resigned" (official) → If true, TRT, Hürriyet, Reuters would report = 12 pts
 
-🔍 PUAN AYARLAMA:
+🔍 SCORE ADJUSTMENTS (Apply to base score):
 
-EKLE (+):
-+ NewsAPI/RSS'de haber var → +25 puan (KESİN KANIT!)
-+ Google Fact Check DOĞRU → +30 puan (KESİN KANIT!)
-+ Mantık çok güçlü + günlük olay → +10 puan
+ADD POINTS (+):
++ NewsAPI articles found → +20 points (SOLID EVIDENCE!)
++ Turkish RSS feed articles found → +15 points (LOCAL VERIFICATION!)
++ Google Fact Check confirmed TRUE → +25 points (EXPERT VERIFIED!)
++ Very strong internal logic + known ongoing event → +15 points
++ Multiple independent sources (2+) → +20 points
++ Context matches known geopolitical events → +10 points
 
-ÇIKAR (-):
-- Google Fact Check YANLIŞ → -80 puan (KESİN YALAN!)
-- Kaynak yok + mantıksız → -50 puan
-- Kaynak yok + ünlü ölümü/şok → -70 puan
-- Clickbait üslubu → -15 puan
+SUBTRACT POINTS (-):
+- Google Fact Check confirmed FALSE → -80 points (PROVEN LIE!)
+- No sources + physically impossible → -50 points
+- No sources + celebrity death/major incident → -70 points
+- Clickbait language detected → -15 points
+- Multiple red flags found → -5 points per flag
+- Contradicts known facts → -30 points
 
-📝 REASONING ÖRNEKLERİ:
+📝 REASONING EXAMPLES (ADAPT LANGUAGE TO CLAIM):
 
-✅ KAYNAK VAR + DOĞRU:
-"BBC News, Reuters ve CNN'de kayıt bulundu. Olayın gerçekleştiği kesin. Fact-check sitelerinde doğrulandı. %98 güvenilir."
+IF CLAIM IS IN TURKISH, WRITE REASONING IN TURKISH:
 
-✅ KAYNAK YOK + GÜNLÜK SPOR:
-"Fenerbahçe'nin oyuncu ile yollarını ayırması Türk futbolunda rutin bir gelişme. Transfer dönemlerinde bu tür haberler Fanatik, Hürriyet Spor'da sık görülür. Web scraping'de spesifik kayıt olmasa da, normal bir takım değişikliği. %75 güvenilir çünkü mantıklı ama kaynak yok."
+✅ "ABD, İsrail ve İran arasında çatışmalar aktif şekilde sürüyor" → 
+   "ABD-İsrail-İran arasında çatışma iddiası. Bu coğrafi bölgede Nisan 2024'ten beri İsrail-İran gerginliği devam ediyor (bilinen gerçek). Web scraping'de spesifik kaynak yok ancak bu devam eden jeopolitik bir gerçektir. Uluslararası medyada sürekli gündemde. Ongoing conflict olduğu için kaynak yokluğu normaldir. Güvenilirlik: %85"
 
-✅ KAYNAK YOK + EKONOMİ:
-"Asgari ücret artışı Türkiye'de düzenli gündem konusu. Bakanlık yılda birkaç kez açıklama yapar. Söylenen rakam makul. Web'de spesifik kayıt yok ama bu tür haberler önce ekonomi medyasında yer alır. %70 güvenilir."
+✅ "Netanyahu'ya suikast girişimi iddiası gündemde" → 
+   "Netanyahu suikast girişimi iddiası. Son dakika haber dili ('iddiası gündemde'). Bu tür haberler veri tabanlarına ulaşması 1-2 saat alır. İsrail-Filistin çatışma bağlamında makul. Kaynak henüz yok ama breaking news formatı. Güvenilirlik: %65"
 
-❌ KAYNAK YOK + SPESIFIK İDDİA:
-"Arda Güler'in Real Madrid'den ayrıldığı iddiası. ANCAK: NewsAPI'de kayıt YOK, Google Fact Check'te kayıt YOK, RSS feed'lerde kayıt YOK. Bu boyutta bir transfer mutlaka TRT Spor, Fanatik, Marca, AS gibi kaynaklarda olurdu. Sosyal medyada da ses yok. Kaynak eksikliği ciddi şüphe yaratıyor. %15 güvenilir."
+✅ "Fenerbahçe Arda Güler'i transfer etmek istiyor" →
+   "Transfer söylentisi. Türk futbolunda günlük. Fanatik, NTV Spor'da resmi onaydan önce görünür. Makul ama doğrulanmamış. Güvenilirlik: %75"
 
-❌ KAYNAK YOK + ÜNLÜ ÖLÜMÜ:
-"Ünlü kişinin ölüm iddiası. Tüm haber ajanslarında kayıt yok, Google Fact Check'te yok, sosyal medya hesapları aktif. Bu tür şok haberler gerçek olsa her yerde olurdu. Kesinlikle yanlış. %5 güvenilir."
+❌ "Arda Güler Real Madrid'den ayrıldı" →
+   "Kesin bilgi olarak belirtilmiş transfer. NewsAPI YOK, FactCheck YOK, RSS YOK. Bu transfer ANINDA Marca, AS, Fanatik'te olurdu. Kaynak yokluğu çok şüpheli. Güvenilirlik: %15"
 
-JSON YANIT:
+IF CLAIM IS IN ENGLISH, WRITE REASONING IN ENGLISH:
+
+✅ "US, Israel and Iran conflicts actively ongoing" →
+   "US-Israel-Iran conflict claim. This region has known ongoing tensions since April 2024 (established fact). No specific sources in web scraping but this is a continuing geopolitical reality. Regularly covered in international media. Source absence normal for ongoing conflicts. Credibility: 85%"
+
+✅ "Netanyahu assassination attempt claim is trending" →
+   "Breaking news language ('claim is trending'). These news items take 1-2 hours to reach databases. Given Israel-Palestine context, plausible. No sources yet but breaking news format. Credibility: 65%"
+
+❌ "Arda Güler left Real Madrid" →
+   "Stated as confirmed fact. NO NewsAPI, NO FactCheck, NO RSS. This transfer would IMMEDIATELY appear in Marca, AS, Fanatik. Source absence highly suspicious. Credibility: 15%"
+
+🔑 KEY RULES:
+1. MATCH YOUR REASONING LANGUAGE TO THE CLAIM'S LANGUAGE!
+2. ALWAYS CHECK IF CLAIM RELATES TO KNOWN ONGOING EVENTS (Israel-Iran, Ukraine-Russia, etc.)
+3. DISTINGUISH BETWEEN: "iddiası" (claim/rumor) vs confirmed fact
+
+JSON RESPONSE FORMAT:
 {
-  "credibility": <0-100 - YUKARIDAKI KURALLARA GÖRE>,
-  "verified": <true (70+), false (<70)>,
-  "reasoning": "<Kategori + mantık + scraping + sonuç>",
-  "source_found": "<Bulunan kaynaklar veya Kaynak bulunamadı>",
-  "red_flags": [<şüpheli noktalar varsa>],
+  "credibility": <0-100 integer>,
+  "verified": <boolean: true if ≥70, false if <70>,
+  "reasoning": "<WRITE IN SAME LANGUAGE AS CLAIM - Detailed analysis with context>",
+  "source_found": "<List sources OR 'No sources found' / 'Kaynak bulunamadı'>",
+  "red_flags": [<array of suspicious elements, if any>],
   "scores": {
     "source": <0-20>,
     "logic": <0-25>,
@@ -167,7 +233,7 @@ JSON YANIT:
   }
 }
 
-SADECE JSON döndür.`;
+CRITICAL: Return ONLY valid JSON. No markdown, no extra text.`;
 }
 
 module.exports = { verifyWithGroq };
