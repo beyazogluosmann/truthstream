@@ -78,58 +78,78 @@ HABER: "${text}"
 
 ${scraperContext ? `\n${scraperContext}\n` : ''}
 
-PUANLAMA SİSTEMİ (ÇOK ÖNEMLİ):
+⚠️ KRİTİK KURAL: KAYNAK YOKSA = YÜKSEK İHTİMALLE YANLIŞ!
 
 📊 PUAN ARALIKLARI:
-90-100: Kesinlikle doğru, kayıtlı haber
-80-89:  Muhtemelen doğru, mantıklı gelişme  
-70-79:  Olası doğru, normal haber kategorisi ← SPOR/EKONOMİ BURAYA!
-60-69:  Belirsiz, daha fazla araştırma gerekli
-50-59:  Şüpheli, kaynak eksikliği var
-0-49:   Yanlış veya dezenformasyon
+95-100: Kesinlikle doğru, KANITLI (web kaynağı var)
+85-94:  Muhtemelen doğru, mantıklı + kaynak var
+75-84:  Olası doğru, mantıklı ama kaynak yok
+65-74:  Belirsiz, kaynak yok + mantık zayıf
+50-64:  Şüpheli, kaynak yok + çelişki var
+0-49:   Kesinlikle yanlış, kaynak yok + mantıksız
 
-🎯 TÜRK HABERLERİ İÇİN BAŞLANGIÇ PUANLARI:
+🎯 KARAR AKIŞI (SIRASINA DİKKAT ET!):
 
-1. SPOR HABERLERİ → BAŞLANGIÇ: 75 PUAN
-   - Fenerbahçe, Galatasaray, Beşiktaş, Trabzonspor
-   - Transfer, ayrılık, yeni imza haberleri
-   - Bu Türkiye'de GÜNLÜKtür, çok normal!
+1️⃣ KAYNAK VAR MI?
+   ✅ VARSA → Minimum 85 puan (eğer mantıklıysa 95+)
+   ❌ YOKSA → 2️⃣'ye geç
 
-2. EKONOMİ HABERLERİ → BAŞLANGIÇ: 70 PUAN
-   - Asgari ücret, TL, döviz, enflasyon
-   - TBMM kararları, bakanlık açıklamaları
-
-3. POLİTİK HABERLER → BAŞLANGIÇ: 65 PUAN
-   - Seçim, atama, toplantı
-
-4. ULUSLARARASI → BAŞLANGIÇ: 60 PUAN
-   - Savaş, çatışma (İran-İsrail, vb.)
-
-5. ÜNLÜ/ŞOK HABERİ → BAŞLANGIÇ: 20 PUAN
-   - Ölüm, skandal (kaynak gerekir!)
+2️⃣ KAYNAK YOKSA → ÖZEL DURUMLAR:
+   
+   A) GÜNLÜK TÜRK HABERLERİ (Kaynak olmasa da mantıklı):
+      🏟️ SPOR HABERİ → 75-80 puan
+         - Takım: Fenerbahçe, Galatasaray, Beşiktaş
+         - Konu: Transfer, ayrılık, yeni imza
+         - Mantık: Türkiye'de her gün oluyor, normal
+      
+      💰 EKONOMİ HABERİ → 70-75 puan
+         - Konu: Asgari ücret, TL, döviz, enflasyon
+         - Mantık: Bakanlık rutin açıklaması olabilir
+   
+   B) ÖZEL DURUMLAR (Kaynak ZORUNLU):
+      ⚠️ ÜNLÜ KİŞİ ÖLÜMÜ → 0-15 puan
+         - Mantık: Bu haber MUTLAKA Twitter/medyada olurdu
+         - Sonuç: Kaynak yok = kesinlikle yalan
+      
+      ⚠️ ŞOK İDDİALAR → 0-20 puan
+         - Konu: Savaş, büyük olay, skandal
+         - Mantık: Bu haber MUTLAKA tüm medyada olurdu
+         - Sonuç: Kaynak yok = kesinlikle yalan
+      
+      ⚠️ SPESIFIK İDDİALAR → 10-25 puan
+         - Örnek: "X kişisi Y takımından ayrıldı"
+         - Mantık: Gerçek olsa Fanatik, NTV Spor'da olurdu
+         - Sonuç: Kaynak yok = büyük ihtimalle yalan
 
 🔍 PUAN AYARLAMA:
 
 EKLE (+):
-+ Web'de kaynak bulundu → +10 puan
-+ Google Fact Check DOĞRU → +15 puan
-+ Mantık çok güçlü → +10 puan
++ NewsAPI/RSS'de haber var → +25 puan (KESİN KANIT!)
++ Google Fact Check DOĞRU → +30 puan (KESİN KANIT!)
++ Mantık çok güçlü + günlük olay → +10 puan
 
 ÇIKAR (-):
-- Google Fact Check YANLIŞ → -40 puan
-- Fiziksel imkansız → -50 puan
-- Clickbait üslubu → -10 puan
+- Google Fact Check YANLIŞ → -80 puan (KESİN YALAN!)
+- Kaynak yok + mantıksız → -50 puan
+- Kaynak yok + ünlü ölümü/şok → -70 puan
+- Clickbait üslubu → -15 puan
 
 📝 REASONING ÖRNEKLERİ:
 
-SPOR:
-"Fenerbahçe'nin oyuncu ile yollarını ayırması Türk futbolunda rutin bir gelişme. Transfer dönemlerinde bu tür haberler Fanatik, Hürriyet Spor, NTV Spor'da sık görülür. Web scraping'de spesifik kayıt olmasa da, bu normal bir takım değişikliği. Mantıksal olarak tutarlı ve olası."
+✅ KAYNAK VAR + DOĞRU:
+"BBC News, Reuters ve CNN'de kayıt bulundu. Olayın gerçekleştiği kesin. Fact-check sitelerinde doğrulandı. %98 güvenilir."
 
-EKONOMİ:
-"Asgari ücret artışı Türkiye'de düzenli gündem konusu. TBMM ve Çalışma Bakanlığı yılda birkaç kez bu konuyu ele alır. Söylenen rakam 2026 koşulları için makul. Henüz resmi açıklama olmasa da, bu tür haberler önce ekonomi medyasında yer alır."
+✅ KAYNAK YOK + GÜNLÜK SPOR:
+"Fenerbahçe'nin oyuncu ile yollarını ayırması Türk futbolunda rutin bir gelişme. Transfer dönemlerinde bu tür haberler Fanatik, Hürriyet Spor'da sık görülür. Web scraping'de spesifik kayıt olmasa da, normal bir takım değişikliği. %75 güvenilir çünkü mantıklı ama kaynak yok."
 
-YALAN:
-"Ünlü kişinin ölüm iddiası. Tüm haber ajanslarında kayıt yok, sosyal medya hesapları aktif. Bu tür şok haberler genellikle viral dezenformasyon. Kesinlikle yanlış."
+✅ KAYNAK YOK + EKONOMİ:
+"Asgari ücret artışı Türkiye'de düzenli gündem konusu. Bakanlık yılda birkaç kez açıklama yapar. Söylenen rakam makul. Web'de spesifik kayıt yok ama bu tür haberler önce ekonomi medyasında yer alır. %70 güvenilir."
+
+❌ KAYNAK YOK + SPESIFIK İDDİA:
+"Arda Güler'in Real Madrid'den ayrıldığı iddiası. ANCAK: NewsAPI'de kayıt YOK, Google Fact Check'te kayıt YOK, RSS feed'lerde kayıt YOK. Bu boyutta bir transfer mutlaka TRT Spor, Fanatik, Marca, AS gibi kaynaklarda olurdu. Sosyal medyada da ses yok. Kaynak eksikliği ciddi şüphe yaratıyor. %15 güvenilir."
+
+❌ KAYNAK YOK + ÜNLÜ ÖLÜMÜ:
+"Ünlü kişinin ölüm iddiası. Tüm haber ajanslarında kayıt yok, Google Fact Check'te yok, sosyal medya hesapları aktif. Bu tür şok haberler gerçek olsa her yerde olurdu. Kesinlikle yanlış. %5 güvenilir."
 
 JSON YANIT:
 {
