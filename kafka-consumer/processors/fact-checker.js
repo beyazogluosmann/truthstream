@@ -22,12 +22,12 @@ class FactChecker {
    */
   async checkClaim(claim, languageCode = 'tr') {
     if (!this.apiKey) {
-      console.warn('⚠️ Google Fact Check API key bulunamadı');
+      console.warn(' Google Fact Check API key bulunamadı');
       return [];
     }
 
     try {
-      console.log(`🔍 Fact-check sorgusu: "${claim.substring(0, 50)}..."`);
+      console.log(` Fact-check sorgusu: "${claim.substring(0, 50)}..."`);
 
       const response = await axios.get(this.baseUrl, {
         params: {
@@ -42,11 +42,11 @@ class FactChecker {
       const claims = response.data.claims || [];
       
       if (claims.length === 0) {
-        console.log('ℹ️ Fact-check sonucu bulunamadı');
+        console.log('ℹ Fact-check sonucu bulunamadı');
         return [];
       }
 
-      console.log(`✅ ${claims.length} fact-check sonucu bulundu`);
+      console.log(` ${claims.length} fact-check sonucu bulundu`);
       
       return claims.map(claim => this.normalizeClaim(claim));
     } catch (error) {
@@ -54,15 +54,15 @@ class FactChecker {
       // the scoring system doesn't treat it as "no evidence found".
       const status = error.response?.status;
       if (status && status >= 500) {
-        console.error(`❌ Fact Check API unavailable (HTTP ${status})`);
+        console.error(` Fact Check API unavailable (HTTP ${status})`);
         return [{ __unavailable: true, status }];
       }
       if (error.response?.status === 429) {
-        console.error('⚠️ Fact Check API rate limit aşıldı');
+        console.error(' Fact Check API rate limit aşıldı');
       } else if (error.code === 'ECONNABORTED') {
-        console.error('⚠️ Fact Check API timeout');
+        console.error(' Fact Check API timeout');
       } else {
-        console.error('❌ Fact Check API hatası:', error.message);
+        console.error(' Fact Check API hatası:', error.message);
       }
       return [];
     }

@@ -188,10 +188,13 @@ async function processClaim(claim) {
       console.log(`   Score: ${verifiedClaim.score}/100 ${scoreResult.verdict.emoji}`);
       console.log(`   Verdict: ${scoreResult.verdict.tr}`);
       console.log(`   Breakdown:`);
-      console.log(`      - Fact Check: ${scoreResult.breakdown.factCheck}/50`);
-      console.log(`      - News API: ${scoreResult.breakdown.newsApi}/30`);
-      console.log(`      - LLM: ${scoreResult.breakdown.llm}/15`);
+      console.log(`      - AI (Groq): ${scoreResult.breakdown.llm}/60 🤖`);
+      console.log(`      - Fact Check: ${scoreResult.breakdown.factCheck}/20`);
+      console.log(`      - News API: ${scoreResult.breakdown.newsApi}/15`);
       console.log(`      - Source: ${scoreResult.breakdown.source}/5`);
+      if (scoreResult.breakdown.evidenceBonus) {
+        console.log(`      - Evidence Bonus: +${scoreResult.breakdown.evidenceBonus} ✨`);
+      }
       if (scoreResult.reasoning && scoreResult.reasoning.length > 0) {
         console.log(`   Reasoning:`);
         scoreResult.reasoning.forEach(reason => console.log(`      ${reason}`));
@@ -275,6 +278,7 @@ async function startConsumer() {
     console.log('='.repeat(70));
     console.log(' System Ready! Waiting for claims...');
     console.log('   - Pipeline: LLM → Fact Check → News API → Scoring');
+    console.log('   - AI-FIRST: Groq (60%) + External Evidence (40%)');
     console.log('   - LLM: Groq (Llama 3.3 70B) / Gemini / Anthropic');
     console.log('   - Fact Check: Google Fact Check API');
     console.log('   - News: NewsAPI.org');

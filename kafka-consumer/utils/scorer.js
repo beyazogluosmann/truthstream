@@ -1,78 +1,68 @@
 /**
- * TruthStream Skor Hesaplama Motoru - KANİT ODAKLI
+ * TruthStream Skor Hesaplama Motoru - AI-FIRST! 🤖
  * 
- * YENİ Ağırlıklandırılmış skor sistemi:
- * - Fact Check: 50 puan (EN ÖNEMLİ!)
- * - News API: 30 puan
- * - LLM Analizi: 15 puan
- * - Kaynak Güvenilirliği: 5 puan
+ * YENİ AI-FIRST Ağırlıklandırılmış skor sistemi:
+ * - LLM (Groq) Analizi: 60 puan (ASIL KARAR VERİCİ!)
+ * - Fact Check: 20 puan (Destekleyici)
+ * - News API: 15 puan (Destekleyici)
+ * - Kaynak Güvenilirliği: 5 puan (Bonus)
  * 
  * Toplam: 100 puan
  * 
- * PRENSİP: KANITLAR VARSA YÜKSEK, YOKSA DÜŞÜK!
+ * PRENSİP: AI KARAR VERİR, DİĞERLERİ DESTEKLER!
  */
 
 class TruthScorer {
   constructor() {
     this.weights = {
-      factCheckFound: 50,      // Fact check EN ÖNEMLİ
-      newsApiMatches: 30,      // Haber kaynakları ÖNEMLİ
-      llmConfidence: 15,       // LLM yardımcı
+      llmConfidence: 60,       // LLM ASIL KARAR VERİCİ
+      factCheckFound: 20,      // Fact check destekleyici
+      newsApiMatches: 15,      // Haber kaynakları destekleyici
       sourceCredibility: 5     // Kaynak bonus
     };
   }
 
   /**
-   * Ana skor hesaplama - KANİT ODAKLI SİSTEM
+   * Ana skor hesaplama - AI-FIRST SİSTEM! 🤖
    */
   calculateFinalScore(data) {
     let totalScore = 0;
     let breakdown = {};
 
-    // 1. Fact Check Sonucu (0-50 puan) - ARTIK DAHA ÖNEMLİ
-    const factCheckScore = this.evaluateFactCheck(data.factCheckResults);
-    totalScore += factCheckScore;
-    breakdown.factCheck = factCheckScore;
-
-    // 2. News API Eşleşmeleri (0-30 puan)
-    const newsScore = this.evaluateNewsMatches(data.newsApiResults);
-    totalScore += newsScore;
-    breakdown.newsApi = newsScore;
-
-    // 3. LLM Güven Skoru (0-15 puan) - AZALTILDI
+    // 1. LLM Güven Skoru (0-60 puan) - ASIL KARAR VERİCİ! 🤖
     const llmScore = this.evaluateLLMConfidence(data.llmAnalysis);
     totalScore += llmScore;
     breakdown.llm = llmScore;
 
-    // 4. Kaynak Güvenilirliği (0-5 puan) - AZALTILDI
+    // 2. Fact Check Sonucu (0-20 puan) - Destekleyici
+    const factCheckScore = this.evaluateFactCheck(data.factCheckResults);
+    totalScore += factCheckScore;
+    breakdown.factCheck = factCheckScore;
+
+    // 3. News API Eşleşmeleri (0-15 puan) - Destekleyici
+    const newsScore = this.evaluateNewsMatches(data.newsApiResults);
+    totalScore += newsScore;
+    breakdown.newsApi = newsScore;
+
+    // 4. Kaynak Güvenilirliği (0-5 puan) - Bonus
     const sourceScore = this.evaluateSourceCredibility(data.sourceUrl);
     totalScore += sourceScore;
     breakdown.source = sourceScore;
 
-    // KRİTİK: KANITLAR YOKSA SKOR DÜŞÜK OLMALI!
+    // BONUS: Dış kaynaklar AI'yı desteklerse +10 puan
     const credibleNewsCount = this.countCredibleNews(data.newsApiResults);
     const factCheckUnavailable = this.isFactCheckUnavailable(data.factCheckResults);
     const hasFactCheck = Array.isArray(data.factCheckResults) && data.factCheckResults.length > 0 && !factCheckUnavailable;
-    const claimText = String(data.claimText || '');
-
-    // KANIT YOK = DÜŞÜK SKOR
-    if (!hasFactCheck && credibleNewsCount === 0) {
-      // Hiç kanıt bulunamadı - maksimum 25 puan
-      totalScore = Math.min(totalScore, 25);
-      breakdown.noEvidencePenalty = true;
-    } else if (!hasFactCheck && credibleNewsCount < 2) {
-      // Sadece 1 haber var, fact check yok - maksimum 40 puan
-      totalScore = Math.min(totalScore, 40);
-      breakdown.weakEvidencePenalty = true;
+    
+    // AI yüksek güven + dış kanıt varsa = BONUS!
+    if (llmScore >= 40 && (hasFactCheck || credibleNewsCount > 0)) {
+      const bonus = Math.min(10, (hasFactCheck ? 5 : 0) + credibleNewsCount * 2);
+      totalScore += bonus;
+      breakdown.evidenceBonus = bonus;
     }
 
-    // Yüksek riskli iddialar için daha da sıkı
-    if (this.isHighRiskClaim(claimText)) {
-      if (!hasFactCheck && credibleNewsCount < 3) {
-        totalScore = Math.min(totalScore, 20);
-        breakdown.highRiskPenalty = true;
-      }
-    }
+    // Skor limiti: max 100
+    totalScore = Math.min(totalScore, 100);
 
     return {
       finalScore: Math.round(totalScore),
@@ -84,116 +74,108 @@ class TruthScorer {
   }
 
   /**
-   * Google Fact Check sonucunu değerlendir - DAHA AGRESİF
+   * Google Fact Check sonucunu değerlendir - Destekleyici (0-20)
    */
   evaluateFactCheck(factCheckResults) {
     if (this.isFactCheckUnavailable(factCheckResults)) {
-      return 15; // Servis çalışmıyorsa nötr, ama düşük
+      return 10; // Servis çalışmıyorsa nötr
     }
     if (!factCheckResults || factCheckResults.length === 0) {
-      return 0; // BULUNAMADI = 0 PUAN! (Eskiden 10 puandı)
+      return 5; // Bulunamadı ama AI'ya güveniyoruz
     }
 
     const ratings = factCheckResults.map(fc => {
       const rating = fc.claimReview?.[0]?.textualRating?.toLowerCase() || '';
       
-      // Yüksek güvenilirlik - Doğru
+      // Doğru
       if (rating.includes('true') || rating.includes('doğru') || rating.includes('correct') || rating.includes('accurate')) {
-        return 50; // ARTIK 50 PUAN
+        return 20;
       }
       // Kısmen doğru
       if (rating.includes('mostly') || rating.includes('partially') || rating.includes('kısmen') || rating.includes('mixed')) {
-        return 30;
+        return 15;
       }
       // Belirsiz
       if (rating.includes('unproven') || rating.includes('unclear') || rating.includes('belirsiz') || rating.includes('unverified')) {
-        return 15;
+        return 10;
       }
       // Yanıltıcı
       if (rating.includes('misleading') || rating.includes('yanıltıcı') || rating.includes('exaggerated')) {
-        return 8;
+        return 5;
       }
       // Yanlış
       if (rating.includes('false') || rating.includes('yanlış') || rating.includes('wrong') || rating.includes('fake')) {
-        return 2; // Yanlış olduğu kanıtlanmış = çok düşük
+        return 0;
       }
       
-      return 15; // Bilinmeyen durum
+      return 10;
     });
 
-    // En yüksek skoru al
     return Math.max(...ratings);
   }
 
   /**
-   * News API eşleşmelerini değerlendir - DAHA AGRESİF
+   * News API eşleşmelerini değerlendir - Destekleyici (0-15)
    */
   evaluateNewsMatches(newsResults) {
     if (!newsResults || newsResults.length === 0) {
-      return 0; // Hiç kaynak yok = 0 PUAN!
+      return 3; // Haber yok ama AI'ya güveniyoruz
     }
 
-    const totalArticles = newsResults.length;
     const credibleSources = newsResults.filter(article => 
       this.isCredibleNewsSource(article.source?.name)
     ).length;
 
-    // Güvenilir kaynak yoksa minimal puan
     if (credibleSources === 0) {
-      return 2; // Kaynak var ama güvenilir değil
+      return 5; // Kaynak var ama güvenilir değil
     }
 
-    // Güvenilir kaynak sayısına göre agresif skorlama
-    let score = 0;
-    
-    if (credibleSources >= 5) {
-      score = 30; // 5+ güvenilir kaynak = TAM PUAN
-    } else if (credibleSources >= 3) {
-      score = 25; // 3-4 güvenilir kaynak = çok iyi
-    } else if (credibleSources >= 2) {
-      score = 18; // 2 güvenilir kaynak = iyi
-    } else if (credibleSources === 1) {
-      score = 10; // 1 güvenilir kaynak = orta
-    }
+    // Güvenilir kaynak sayısına göre
+    if (credibleSources >= 5) return 15; // Tam puan
+    if (credibleSources >= 3) return 13;
+    if (credibleSources >= 2) return 10;
+    if (credibleSources >= 1) return 8;
 
-    return Math.round(score);
+    return 5;
   }
 
   /**
-   * LLM analizini değerlendir - AZALTILDI (0-15 puan)
+   * LLM analizini değerlendir - ASIL KARAR VERİCİ! (0-60 puan) 🤖
    */
   evaluateLLMConfidence(llmAnalysis) {
-    if (!llmAnalysis) return 3;
+    if (!llmAnalysis) return 20; // Base orta skor
 
-    const { confidence, contradictions, supportingEvidence, sentiment } = llmAnalysis;
+    const { confidence, contradictions, supportingEvidence, sentiment, category } = llmAnalysis;
 
-    let score = 3; // Base skor
+    let score = 20; // Base skor
 
-    // Güven seviyesi
+    // GÜVEN SEVİYESİ (Ana faktör)
     if (confidence === 'high' || confidence === 'yüksek') {
-      score += 8;
+      score = 50; // Yüksek güven = 50 puan base
     } else if (confidence === 'medium' || confidence === 'orta') {
-      score += 4;
+      score = 30; // Orta güven = 30 puan base
     } else if (confidence === 'low' || confidence === 'düşük') {
-      score += 0;
+      score = 15; // Düşük güven = 15 puan base
     }
 
-    // Çelişkiler varsa düş
+    // Çelişkiler varsa cezalandır
     if (contradictions && contradictions.length > 0) {
-      score -= Math.min(contradictions.length * 2, 6);
+      score -= Math.min(contradictions.length * 5, 15);
     }
 
-    // Destekleyici kanıtlar varsa artır
+    // Destekleyici kanıtlar varsa ödüllendir
     if (supportingEvidence && supportingEvidence.length > 0) {
-      score += Math.min(supportingEvidence.length, 6);
+      score += Math.min(supportingEvidence.length * 3, 15);
     }
 
-    // Sentiment analizi
+    // Sentiment/Manipülasyon kontrolü
     if (sentiment === 'manipulative' || sentiment === 'sensational') {
-      score -= 4;
+      score -= 10;
+    } else if (sentiment === 'neutral' || sentiment === 'informative') {
+      score += 5;
     }
 
-    return Math.max(0, Math.min(score, 15));
+    return Math.max(0, Math.min(score, 60));
   }
 
   /**
@@ -345,54 +327,40 @@ class TruthScorer {
   generateReasoning(breakdown, data) {
     const reasons = [];
 
-    // Fact check açıklaması
-    if (this.isFactCheckUnavailable(data.factCheckResults)) {
-      reasons.push('⚠️ Fact-check servisine geçici olarak ulaşılamadı');
-    } else if (breakdown.factCheck >= 40) {
-      reasons.push('✅ Fact-check kuruluşları iddiayı doğruladı');
-    } else if (breakdown.factCheck >= 25) {
-      reasons.push('📊 Fact-check kuruluşları kısmen doğru buldu');
-    } else if (breakdown.factCheck <= 5) {
-      reasons.push('❌ Fact-check kuruluşları iddiayı yalanladı');
-    } else if (breakdown.factCheck === 0) {
-      reasons.push('🔍 Fact-check kuruluşlarında sonuç bulunamadı');
+    // LLM (ASIL KARAR VERİCİ)
+    if (breakdown.llm >= 45) {
+      reasons.push('🤖 AI analizi yüksek güvenle DOĞRU buldu');
+    } else if (breakdown.llm >= 30) {
+      reasons.push('🤖 AI analizi orta güvenle değerlendirdi');
+    } else if (breakdown.llm >= 15) {
+      reasons.push('⚠️ AI analizi düşük güven gösterdi');
+    } else {
+      reasons.push('❌ AI analizi şüpheli veya manipülatif buldu');
     }
 
-    // News API açıklaması
-    const newsCount = data.newsApiResults?.length || 0;
+    // Bonus açıklaması
+    if (breakdown.evidenceBonus) {
+      reasons.push(`✨ Dış kaynaklar AI analizini destekledi (+${breakdown.evidenceBonus} bonus)`);
+    }
+
+    // Fact check
+    if (breakdown.factCheck >= 15) {
+      reasons.push('✅ Fact-check kuruluşları doğruluyor');
+    } else if (breakdown.factCheck <= 5 && !this.isFactCheckUnavailable(data.factCheckResults)) {
+      reasons.push('⚠️ Fact-check kuruluşları şüpheli buluyor');
+    }
+
+    // News API
     const credibleCount = this.countCredibleNews(data.newsApiResults);
-    
-    if (breakdown.newsApi >= 25) {
-      reasons.push(`📰 ${credibleCount} güvenilir haber kaynağında doğrulandı`);
-    } else if (breakdown.newsApi >= 15) {
-      reasons.push(`📰 ${credibleCount} güvenilir haber kaynağında bulundu`);
-    } else if (breakdown.newsApi === 0 && newsCount === 0) {
-      reasons.push('❌ Haber kaynaklarında hiç bulunmadı');
-    } else if (breakdown.newsApi <= 5 && credibleCount === 0) {
-      reasons.push('⚠️ Güvenilir haber kaynaklarında bulunamadı');
+    if (credibleCount >= 3) {
+      reasons.push(`📰 ${credibleCount} güvenilir haber kaynağı destekliyor`);
+    } else if (credibleCount === 0 && (data.newsApiResults?.length || 0) === 0) {
+      reasons.push('📰 Haber kaynaklarında bulunamadı');
     }
 
-    // LLM açıklaması
-    if (breakdown.llm >= 12) {
-      reasons.push('🤖 AI analizi yüksek güven seviyesi gösterdi');
-    } else if (breakdown.llm <= 4) {
-      reasons.push('⚠️ AI analizi çelişkiler veya manipülasyon tespit etti');
-    }
-
-    // Kaynak açıklaması
+    // Kaynak
     if (breakdown.source >= 4) {
       reasons.push('🔗 Kaynak yüksek güvenilirliğe sahip');
-    } else if (breakdown.source <= 1) {
-      reasons.push('⚠️ Kaynak güvenilirliği düşük veya bilinmiyor');
-    }
-
-    // Kanıt eksikliği uyarıları
-    if (breakdown.noEvidencePenalty) {
-      reasons.push('⛔ UYARI: Hiç dış kanıt bulunamadı!');
-    } else if (breakdown.weakEvidencePenalty) {
-      reasons.push('⚠️ UYARI: Kanıt yetersiz!');
-    } else if (breakdown.highRiskPenalty) {
-      reasons.push('🚨 UYARI: Yüksek riskli iddia, yetersiz kanıt!');
     }
 
     return reasons;
