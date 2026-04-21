@@ -184,14 +184,18 @@ async function processClaim(claim) {
       // Log summary
       console.log(`\n${'='.repeat(70)}`);
       console.log(` VERIFICATION SUMMARY:`);
-      console.log(`   Status: ${verifiedClaim.verified ? ' VERIFIED' : ' UNVERIFIED'}`);
+      console.log(`   Status: ${verifiedClaim.verified ? '✅ VERIFIED' : '❌ UNVERIFIED'}`);
       console.log(`   Score: ${verifiedClaim.score}/100 ${scoreResult.verdict.emoji}`);
       console.log(`   Verdict: ${scoreResult.verdict.tr}`);
       console.log(`   Breakdown:`);
-      console.log(`      - Fact Check: ${scoreResult.breakdown.factCheck}/40`);
+      console.log(`      - Fact Check: ${scoreResult.breakdown.factCheck}/50`);
       console.log(`      - News API: ${scoreResult.breakdown.newsApi}/30`);
-      console.log(`      - LLM: ${scoreResult.breakdown.llm}/20`);
-      console.log(`      - Source: ${scoreResult.breakdown.source}/10`);
+      console.log(`      - LLM: ${scoreResult.breakdown.llm}/15`);
+      console.log(`      - Source: ${scoreResult.breakdown.source}/5`);
+      if (scoreResult.reasoning && scoreResult.reasoning.length > 0) {
+        console.log(`   Reasoning:`);
+        scoreResult.reasoning.forEach(reason => console.log(`      ${reason}`));
+      }
       console.log(`   Processing Time: ${processingTime}ms`);
       console.log(`${'='.repeat(70)}\n`);
       
