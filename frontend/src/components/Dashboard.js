@@ -416,31 +416,6 @@ function Dashboard() {
                               </div>
                             </div>
                           )}
-
-                          {/* Scoring breakdown (pipeline) */}
-                          {claim.score_breakdown && (
-                            <div className="mt-4 pt-4 border-t border-slate-700/50">
-                              <p className="text-xs font-semibold text-gray-400 mb-3">Skor Dağılımı (Pipeline)</p>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <p className="text-xs text-gray-400 mb-1">Fact Check</p>
-                                  <p className="text-lg font-bold text-blue-200">{claim.score_breakdown.factCheck || 0}/40</p>
-                                </div>
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <p className="text-xs text-gray-400 mb-1">News API</p>
-                                  <p className="text-lg font-bold text-green-200">{claim.score_breakdown.newsApi || 0}/30</p>
-                                </div>
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <p className="text-xs text-gray-400 mb-1">LLM</p>
-                                  <p className="text-lg font-bold text-purple-200">{claim.score_breakdown.llm || 0}/20</p>
-                                </div>
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <p className="text-xs text-gray-400 mb-1">Kaynak</p>
-                                  <p className="text-lg font-bold text-yellow-200">{claim.score_breakdown.source || 0}/10</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )}
 
