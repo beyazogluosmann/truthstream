@@ -37,6 +37,7 @@ class NewsSearcher {
           language: options.language || 'tr',
           sortBy: options.sortBy || 'relevancy',
           pageSize: this.maxResults,
+          domains: options.domains || undefined,
           from: options.from || this.getLastWeekDate(),
           to: options.to || this.getTodayDate()
         },
@@ -52,7 +53,10 @@ class NewsSearcher {
 
       console.log(` ${articles.length} haber bulundu`);
       
-      return articles.map(article => this.normalizeArticle(article));
+      const normalized = articles.map(article => this.normalizeArticle(article, searchQuery));
+      // Filter low-relevance results so unrelated matches don't inflate score
+      const filtered = normalized.filter(a => (a.relevanceScore || 0) >= 55);
+      return filtered;
     } catch (error) {
       if (error.response?.status === 429) {
         console.error(' News API rate limit aşıldı');
@@ -124,12 +128,15 @@ class NewsSearcher {
 
     // Gereksiz kelimeleri temizle
     searchQuery = searchQuery.replace(/\b(iddia|söylendi|dedi|açıkladı)\b/gi, '');
+    // Aşırı noktalama ve emoji/işaret temizliği (örn: !!!!!)
+    searchQuery = searchQuery.replace(/[!?.,:;"'“”‘’(){}\[\]<>]/g, ' ');
     
     // Fazla boşlukları temizle
     searchQuery = searchQuery.replace(/\s+/g, ' ').trim();
 
     // Tırnak içine al (exact match için)
-    if (options.exactMatch) {
+    const shouldExactMatch = options.exactMatch ?? (searchQuery.length <= 60);
+    if (shouldExactMatch) {
       searchQuery = `"${searchQuery}"`;
     }
 
@@ -147,7 +154,7 @@ class NewsSearcher {
   /**
    * Article nesnesini normalize et
    */
-  normalizeArticle(article) {
+  normalizeArticle(article, queryText = '') {
     return {
       source: {
         id: article.source?.id || null,
@@ -161,7 +168,7 @@ class NewsSearcher {
       urlToImage: article.urlToImage || null,
       publishedAt: article.publishedAt || null,
       content: article.content || '',
-      relevanceScore: this.calculateRelevance(article)
+      relevanceScore: this.calculateRelevance(article, queryText)
     };
   }
 
@@ -207,7 +214,7 @@ class NewsSearcher {
   /**
    * İlgililik skoru hesapla
    */
-  calculateRelevance(article) {
+  calculateRelevance(article, queryText = '') {
     let score = 50; // Base skor
 
     // Kaynak güvenilirliği
@@ -230,6 +237,22 @@ class NewsSearcher {
 
     // Görsel var mı
     if (article.urlToImage) score += 5;
+
+    // Query match bonus (reduce irrelevant matches)
+    const q = String(queryText || '').toLowerCase().replace(/"/g, '').trim();
+    if (q) {
+      const text = `${article.title || ''} ${article.description || ''}`.toLowerCase();
+      const tokens = q
+        .split(/\s+/)
+        .map(t => t.trim())
+        .filter(t => t.length >= 4)
+        .slice(0, 8);
+
+      if (tokens.length > 0) {
+        const hits = tokens.filter(t => text.includes(t)).length;
+        score += Math.min(hits * 6, 18);
+      }
+    }
 
     return Math.min(score, 100);
   }

@@ -117,7 +117,8 @@ async function processClaim(claim) {
       factCheckResults: factCheckResults,
       newsApiResults: newsResults,
       llmAnalysis: llmAnalysis,
-      sourceUrl: claim.url
+      sourceUrl: claim.url,
+      claimText: claim.text
     });
     
     console.log(`    Final Score: ${scoreResult.finalScore}/100`);

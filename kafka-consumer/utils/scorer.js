@@ -47,6 +47,25 @@ class TruthScorer {
     totalScore += sourceScore;
     breakdown.source = sourceScore;
 
+    // Evidence-first adjustments:
+    // If there is no credible external evidence (fact-check + credible news), keep score low.
+    const credibleNewsCount = this.countCredibleNews(data.newsApiResults);
+    const hasFactCheck = Array.isArray(data.factCheckResults) && data.factCheckResults.length > 0;
+    const claimText = String(data.claimText || '');
+
+    // High-risk claims (death, disasters, sensational breaking news) require stronger evidence.
+    if (this.isHighRiskClaim(claimText)) {
+      if (!hasFactCheck && credibleNewsCount === 0) {
+        totalScore = Math.min(totalScore, 30);
+        breakdown.highRiskPenalty = 0; // for debug/visibility if needed
+      }
+    } else {
+      // Non-high-risk: if no evidence anywhere, cap to "uncertain-low"
+      if (!hasFactCheck && credibleNewsCount === 0) {
+        totalScore = Math.min(totalScore, 35);
+      }
+    }
+
     return {
       finalScore: Math.round(totalScore),
       breakdown,
@@ -61,7 +80,7 @@ class TruthScorer {
    */
   evaluateFactCheck(factCheckResults) {
     if (!factCheckResults || factCheckResults.length === 0) {
-      return 20; // Fact check bulunamadı, nötr
+      return 10; // Fact check bulunamadı: kanıt yok, düşük-orta
     }
 
     const ratings = factCheckResults.map(fc => {
@@ -100,7 +119,7 @@ class TruthScorer {
    */
   evaluateNewsMatches(newsResults) {
     if (!newsResults || newsResults.length === 0) {
-      return 10; // Kaynak bulunamadı, düşük skor
+      return 0; // Kaynak bulunamadı: kanıt yok
     }
 
     const totalArticles = newsResults.length;
@@ -111,10 +130,16 @@ class TruthScorer {
     // Güvenilir kaynak yüzdesi
     const credibilityRatio = credibleSources / totalArticles;
     
-    // 0-30 arası skor
-    let score = 10; // Base skor
-    score += (credibilityRatio * 15); // Güvenilirlik bonusu (max 15)
-    score += Math.min(totalArticles * 1, 5); // Kaynak sayısı bonusu (max 5)
+    // 0-30 arası skor (evidence-first): credible sources drive the score
+    let score = 0;
+    if (credibleSources === 0) {
+      // results exist but not from credible outlets => minimal contribution
+      score = Math.min(totalArticles, 5); // 0..5
+    } else {
+      score = 10; // base only if at least 1 credible source exists
+      score += (credibilityRatio * 15); // max 15
+      score += Math.min(credibleSources * 2, 5); // max 5
+    }
 
     return Math.round(Math.min(score, 30));
   }
@@ -123,11 +148,11 @@ class TruthScorer {
    * LLM analizini değerlendir
    */
   evaluateLLMConfidence(llmAnalysis) {
-    if (!llmAnalysis) return 10;
+    if (!llmAnalysis) return 5;
 
     const { confidence, contradictions, supportingEvidence, sentiment } = llmAnalysis;
 
-    let score = 10; // Base skor
+    let score = 5; // Base skor
 
     // Güven seviyesi
     if (confidence === 'high' || confidence === 'yüksek') {
@@ -160,7 +185,7 @@ class TruthScorer {
    * Kaynak güvenilirliğini değerlendir
    */
   evaluateSourceCredibility(sourceUrl) {
-    if (!sourceUrl) return 5;
+    if (!sourceUrl) return 3;
 
     const url = sourceUrl.toLowerCase();
     
@@ -196,6 +221,32 @@ class TruthScorer {
     }
 
     return 5; // Bilinmeyen kaynak
+  }
+
+  countCredibleNews(newsResults) {
+    if (!Array.isArray(newsResults)) return 0;
+    return newsResults.filter(a => this.isCredibleNewsSource(a.source?.name)).length;
+  }
+
+  isHighRiskClaim(text) {
+    const t = String(text || '').toLowerCase();
+    if (!t) return false;
+    const patterns = [
+      /\böldü\b/,
+      /\bvefat\b/,
+      /\bşehit\b/,
+      /\bdeprem\b/,
+      /\btsunami\b/,
+      /\bsavaş\b/,
+      /\bsaldırı\b/,
+      /\bbomba\b/,
+      /\bsuikast\b/,
+      /\bacil\b/,
+      /\bson dakika\b/,
+      /!!!!+/,
+      /\bşok\b/
+    ];
+    return patterns.some(p => p.test(t));
   }
 
   /**
