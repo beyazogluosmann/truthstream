@@ -50,6 +50,13 @@ class FactChecker {
       
       return claims.map(claim => this.normalizeClaim(claim));
     } catch (error) {
+      // If the service is temporarily unavailable, mark it explicitly so
+      // the scoring system doesn't treat it as "no evidence found".
+      const status = error.response?.status;
+      if (status && status >= 500) {
+        console.error(`❌ Fact Check API unavailable (HTTP ${status})`);
+        return [{ __unavailable: true, status }];
+      }
       if (error.response?.status === 429) {
         console.error('⚠️ Fact Check API rate limit aşıldı');
       } else if (error.code === 'ECONNABORTED') {
@@ -183,6 +190,17 @@ class FactChecker {
    * Fact-check sonuçlarını özetle
    */
   summarizeResults(factCheckResults) {
+    if (Array.isArray(factCheckResults) && factCheckResults[0]?.__unavailable) {
+      return {
+        found: false,
+        count: 0,
+        verdict: 'Servis geçici olarak kullanılamadı',
+        confidence: 'low',
+        sources: [],
+        unavailable: true,
+        status: factCheckResults[0]?.status
+      };
+    }
     if (!factCheckResults || factCheckResults.length === 0) {
       return {
         found: false,

@@ -27,36 +27,44 @@ class NewsSearcher {
     }
 
     try {
-      const searchQuery = this.buildSearchQuery(query, options);
-      console.log(` News API sorgusu: "${searchQuery.substring(0, 50)}..."`);
+      const attempt = async (attemptOptions) => {
+        const searchQuery = this.buildSearchQuery(query, attemptOptions);
+        console.log(` News API sorgusu: "${searchQuery.substring(0, 50)}..."`);
 
-      const response = await axios.get(`${this.baseUrl}/everything`, {
-        params: {
-          apiKey: this.apiKey,
-          q: searchQuery,
-          language: options.language || 'tr',
-          sortBy: options.sortBy || 'relevancy',
-          pageSize: this.maxResults,
-          domains: options.domains || undefined,
-          from: options.from || this.getLastWeekDate(),
-          to: options.to || this.getTodayDate()
-        },
-        timeout: 10000
-      });
+        const response = await axios.get(`${this.baseUrl}/everything`, {
+          params: {
+            apiKey: this.apiKey,
+            q: searchQuery,
+            language: attemptOptions.language || 'tr',
+            sortBy: attemptOptions.sortBy || 'relevancy',
+            pageSize: this.maxResults,
+            domains: attemptOptions.domains || undefined,
+            from: attemptOptions.from || this.getLastWeekDate(),
+            to: attemptOptions.to || this.getTodayDate()
+          },
+          timeout: 10000
+        });
 
-      const articles = response.data.articles || [];
-      
-      if (articles.length === 0) {
+        const articles = response.data.articles || [];
+        const normalized = articles.map(article => this.normalizeArticle(article, searchQuery));
+        return normalized.filter(a => (a.relevanceScore || 0) >= 55);
+      };
+
+      // Attempt 1: default (may use exact match)
+      let results = await attempt(options);
+      if (results.length === 0) {
+        console.log('ℹ News API sonucu bulunamadı (fallback deneniyor)');
+        // Attempt 2: broaden query (no exact match)
+        results = await attempt({ ...options, exactMatch: false });
+      }
+
+      if (results.length === 0) {
         console.log('ℹ News API sonucu bulunamadı');
         return [];
       }
 
-      console.log(` ${articles.length} haber bulundu`);
-      
-      const normalized = articles.map(article => this.normalizeArticle(article, searchQuery));
-      // Filter low-relevance results so unrelated matches don't inflate score
-      const filtered = normalized.filter(a => (a.relevanceScore || 0) >= 55);
-      return filtered;
+      console.log(` ${results.length} haber bulundu`);
+      return results;
     } catch (error) {
       if (error.response?.status === 429) {
         console.error(' News API rate limit aşıldı');
@@ -133,6 +141,9 @@ class NewsSearcher {
     
     // Fazla boşlukları temizle
     searchQuery = searchQuery.replace(/\s+/g, ' ').trim();
+
+    // Trim wrapping quotes to avoid accidental double-quoting (""query"")
+    searchQuery = searchQuery.replace(/^"+|"+$/g, '').trim();
 
     // Tırnak içine al (exact match için)
     const shouldExactMatch = options.exactMatch ?? (searchQuery.length <= 60);

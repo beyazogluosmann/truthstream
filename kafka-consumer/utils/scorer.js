@@ -50,7 +50,8 @@ class TruthScorer {
     // Evidence-first adjustments:
     // If there is no credible external evidence (fact-check + credible news), keep score low.
     const credibleNewsCount = this.countCredibleNews(data.newsApiResults);
-    const hasFactCheck = Array.isArray(data.factCheckResults) && data.factCheckResults.length > 0;
+    const factCheckUnavailable = this.isFactCheckUnavailable(data.factCheckResults);
+    const hasFactCheck = Array.isArray(data.factCheckResults) && data.factCheckResults.length > 0 && !factCheckUnavailable;
     const claimText = String(data.claimText || '');
 
     // High-risk claims (death, disasters, sensational breaking news) require stronger evidence.
@@ -79,6 +80,9 @@ class TruthScorer {
    * Google Fact Check sonucunu değerlendir
    */
   evaluateFactCheck(factCheckResults) {
+    if (this.isFactCheckUnavailable(factCheckResults)) {
+      return 20; // neutral if service is down
+    }
     if (!factCheckResults || factCheckResults.length === 0) {
       return 10; // Fact check bulunamadı: kanıt yok, düşük-orta
     }
@@ -331,6 +335,9 @@ class TruthScorer {
     const reasons = [];
 
     // Fact check açıklaması
+    if (this.isFactCheckUnavailable(data.factCheckResults)) {
+      reasons.push('Fact-check servisine geçici olarak ulaşılamadı');
+    }
     if (breakdown.factCheck >= 35) {
       reasons.push('Fact-check kuruluşları iddiayı doğruladı');
     } else if (breakdown.factCheck <= 10) {
@@ -363,6 +370,10 @@ class TruthScorer {
     }
 
     return reasons;
+  }
+
+  isFactCheckUnavailable(factCheckResults) {
+    return Array.isArray(factCheckResults) && factCheckResults[0]?.__unavailable === true;
   }
 }
 

@@ -150,7 +150,7 @@ module.exports = { searchTurkishNews, formatTurkishNewsResults };
 
 // Test code - only runs if file is executed directly
 if (require.main === module) {
-  console.log('🧪 Testing Turkish News Scraper...\n');
+  console.log(' Testing Turkish News Scraper...\n');
   
   const testClaims = [
     "Gaziantep'e füze düştü",
