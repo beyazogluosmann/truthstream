@@ -74,18 +74,27 @@ router.get('/', async (req, res) => {
     const from = (page - 1) * limit;
     const result = await getAllClaims(from, limit, sortBy, order);
     
-    // Minimal response - only essential fields
+    // Minimal response - only essential fields (yeni veri yapısı)
     const minimalClaims = result.claims.map(claim => ({
       id: claim.id,
       text: claim.text,
       category: claim.category,
-      timestamp: claim.timestamp,
+      timestamp: claim.timestamp || claim.created_at,
       verified: claim.verified,
-      credibility: claim.credibility,
-      ai_reasoning: claim.ai_reasoning,
+      credibility: claim.score || claim.credibility || 0, // YENİ: score -> credibility mapping
+      score: claim.score || 0,
+      verdict: claim.verdict,
+      ai_reasoning: Array.isArray(claim.reasoning)
+        ? claim.reasoning.join(' • ')
+        : (claim.reasoning || claim.ai_reasoning || ''),
       red_flags: claim.red_flags || [],
-      source: claim.source,
-      scores: claim.scores
+      source: claim.source || claim.url,
+      scores: claim.scores,
+      score_breakdown: claim.score_breakdown,
+      // YENİ alanlar
+      fact_check: claim.fact_check,
+      news_search: claim.news_search,
+      confidence: claim.confidence
       // Hidden: verification_method, processed_at, user_submitted
     }));
     

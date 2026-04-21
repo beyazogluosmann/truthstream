@@ -35,18 +35,23 @@ async function checkConnection(){
 
 async function getAllClaims(from = 0 , size = 20, sortBy = 'timestamp', order='desc') {
     try {
+        const sortField = sortBy === 'credibility' ? 'score' : sortBy; // YENİ: credibility -> score
+        
         const result = await client.search({
             index: 'news-claims',
             from : from,
             size: size,
             sort: [
-                { [sortBy]: {order: order}}
+                { [sortField]: {order: order}}
             ]
         });
 
         return{
             total: result.hits.total.value,
-            claims: result.hits.hits.map(hit => hit._source)
+            claims: result.hits.hits.map(hit => ({
+                id: hit._id,
+                ...hit._source
+            }))
         };
     } catch (error) {
         console.error('Error fetching claims:', error.message);
@@ -65,7 +70,10 @@ async function getClaimById(id){
             index: 'news-claims',
             id: id
         });
-        return result._source;
+        return {
+            id: result._id,
+            ...result._source
+        };
     } catch (error) {
         if(error.meta?.statusCode === 404){
             return null
@@ -104,8 +112,9 @@ async function searchClaims(query, from = 0, size = 20){
         return{
             total : result.hits.total.value,
             claims: result.hits.hits.map(hit => ({
+                id: hit._id,
                 ...hit._source,
-                score: hit._score
+                searchScore: hit._score
             }))
         };
     } catch (error) {
@@ -138,7 +147,10 @@ async function getClaimsByCategory(category, from = 0, size = 20){
 
         return {
             total : result.hits.total.value,
-            claims: result.hits.hits.map(hit => hit._source)
+            claims: result.hits.hits.map(hit => ({
+                id: hit._id,
+                ...hit._source
+            }))
         }
     } catch (error) {
         console.error('Error fetching claims by category:', error.message);
@@ -172,7 +184,10 @@ async function getClaimsByVerification(verified, from = 0 , size = 20){
 
         return {
             total: result.hits.total.value,
-            claims: result.hits.hits.map(hit => hit._source)
+            claims: result.hits.hits.map(hit => ({
+                id: hit._id,
+                ...hit._source
+            }))
         }
     } catch (error) {
         console.error('Error fetching claims by verification:', error.message);

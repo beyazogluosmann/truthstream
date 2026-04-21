@@ -110,6 +110,27 @@ function Dashboard() {
     return `${Math.floor(diff / 86400)} gün önce`;
   };
 
+  const normalizeReasoningLines = (reasoning) => {
+    if (!reasoning) return [];
+    if (Array.isArray(reasoning)) return reasoning.filter(Boolean);
+    if (typeof reasoning === 'string') {
+      return reasoning
+        .split(/(?:\s*•\s*|\n+)/g)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+    return [];
+  };
+
+  const formatSourceLabel = (label) => {
+    if (!label) return 'Bilinmiyor';
+    if (label === 'very-high') return 'Çok Yüksek';
+    if (label === 'high') return 'Yüksek';
+    if (label === 'medium') return 'Orta';
+    if (label === 'low') return 'Düşük';
+    return String(label);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-950">
       {/* Animated Background */}
@@ -323,68 +344,99 @@ function Dashboard() {
                             </svg>
                             <div className="flex-1">
                               <p className="text-sm font-semibold text-purple-300 mb-2">AI Analizi</p>
-                              <p className="text-gray-300 text-sm leading-relaxed">{claim.ai_reasoning}</p>
+                              {normalizeReasoningLines(claim.ai_reasoning).length > 1 ? (
+                                <ul className="text-gray-300 text-sm leading-relaxed list-disc pl-5 space-y-1">
+                                  {normalizeReasoningLines(claim.ai_reasoning).map((line, idx) => (
+                                    <li key={idx}>{line}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-gray-300 text-sm leading-relaxed">{claim.ai_reasoning}</p>
+                              )}
                             </div>
                           </div>
 
-                          {/* Detailed Scores - if available */}
-                          {claim.scores && (
+                          {/* Evidence / Sources */}
+                          {(claim.fact_check || claim.news_search) && (
                             <div className="mt-4 pt-4 border-t border-slate-700/50">
-                              <p className="text-xs font-semibold text-gray-400 mb-3">Detaylı Değerlendirme</p>
-                              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                                {/* Source Score */}
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                                    </svg>
-                                    <p className="text-xs text-gray-400">Kaynak</p>
-                                  </div>
-                                  <p className="text-lg font-bold text-blue-300">{claim.scores.source || 0}/20</p>
+                              <p className="text-xs font-semibold text-gray-400 mb-3">Kanıtlar & Kaynaklar</p>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Fact check sources */}
+                                <div className="bg-slate-900/40 border border-slate-700/40 rounded-xl p-4">
+                                  <p className="text-xs font-semibold text-blue-300 mb-2">Fact-check</p>
+                                  {claim.fact_check?.found && Array.isArray(claim.fact_check?.sources) && claim.fact_check.sources.length > 0 ? (
+                                    <ul className="space-y-2">
+                                      {claim.fact_check.sources.slice(0, 5).map((src, idx) => (
+                                        <li key={idx} className="text-sm text-gray-300">
+                                          <a
+                                            href={src.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-blue-300 hover:text-blue-200 underline underline-offset-2"
+                                          >
+                                            {src.publisher || 'Kaynak'}
+                                          </a>
+                                          {src.rating ? <span className="text-gray-400"> — {src.rating}</span> : null}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-sm text-gray-500">Sonuç bulunamadı</p>
+                                  )}
                                 </div>
 
-                                {/* Logic Score */}
-                                <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <svg className="w-3 h-3 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                                    </svg>
-                                    <p className="text-xs text-gray-400">Mantık</p>
-                                  </div>
-                                  <p className="text-lg font-bold text-purple-300">{claim.scores.logic || 0}/20</p>
+                                {/* News search sources */}
+                                <div className="bg-slate-900/40 border border-slate-700/40 rounded-xl p-4">
+                                  <p className="text-xs font-semibold text-green-300 mb-2">Haber Kaynakları</p>
+                                  {claim.news_search?.found && Array.isArray(claim.news_search?.top_articles) && claim.news_search.top_articles.length > 0 ? (
+                                    <ul className="space-y-2">
+                                      {claim.news_search.top_articles.slice(0, 5).map((a, idx) => (
+                                        <li key={idx} className="text-sm text-gray-300">
+                                          <a
+                                            href={a.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-green-300 hover:text-green-200 underline underline-offset-2"
+                                          >
+                                            {a.title || 'Kaynak'}
+                                          </a>
+                                          <span className="text-gray-500">
+                                            {' '}
+                                            ({a.source?.name || a.source || 'Bilinmiyor'}
+                                            {a.source?.credibility ? ` • ${formatSourceLabel(a.source.credibility)}` : ''})
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-sm text-gray-500">Doğrulayıcı kaynak bulunamadı</p>
+                                  )}
                                 </div>
+                              </div>
+                            </div>
+                          )}
 
-                                {/* Factuality Score */}
+                          {/* Scoring breakdown (pipeline) */}
+                          {claim.score_breakdown && (
+                            <div className="mt-4 pt-4 border-t border-slate-700/50">
+                              <p className="text-xs font-semibold text-gray-400 mb-3">Skor Dağılımı (Pipeline)</p>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                    <p className="text-xs text-gray-400">Gerçeklik</p>
-                                  </div>
-                                  <p className="text-lg font-bold text-green-300">{claim.scores.factuality || 0}/20</p>
+                                  <p className="text-xs text-gray-400 mb-1">Fact Check</p>
+                                  <p className="text-lg font-bold text-blue-200">{claim.score_breakdown.factCheck || 0}/40</p>
                                 </div>
-
-                                {/* Language Score */}
                                 <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <svg className="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                    </svg>
-                                    <p className="text-xs text-gray-400">Dil/Üslup</p>
-                                  </div>
-                                  <p className="text-lg font-bold text-yellow-300">{claim.scores.language || 0}/20</p>
+                                  <p className="text-xs text-gray-400 mb-1">News API</p>
+                                  <p className="text-lg font-bold text-green-200">{claim.score_breakdown.newsApi || 0}/30</p>
                                 </div>
-
-                                {/* Verifiability Score */}
                                 <div className="bg-slate-900/50 rounded-lg p-3">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <svg className="w-3 h-3 text-pink-400" fill="currentColor" viewBox="0 0 20 20">
-                                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                    <p className="text-xs text-gray-400">Kanıt</p>
-                                  </div>
-                                  <p className="text-lg font-bold text-pink-300">{claim.scores.verifiability || 0}/20</p>
+                                  <p className="text-xs text-gray-400 mb-1">LLM</p>
+                                  <p className="text-lg font-bold text-purple-200">{claim.score_breakdown.llm || 0}/20</p>
+                                </div>
+                                <div className="bg-slate-900/50 rounded-lg p-3">
+                                  <p className="text-xs text-gray-400 mb-1">Kaynak</p>
+                                  <p className="text-lg font-bold text-yellow-200">{claim.score_breakdown.source || 0}/10</p>
                                 </div>
                               </div>
                             </div>
